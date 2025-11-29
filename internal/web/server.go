@@ -46,11 +46,12 @@ type DashboardStats struct {
 }
 
 type TestResult struct {
-	Address string `json:"address"`
-	Group   string `json:"group"`
-	Status  string `json:"status"`
-	Latency string `json:"latency"`
-	Error   string `json:"error,omitempty"`
+	Address  string `json:"address"`
+	Protocol string `json:"protocol"`
+	Group    string `json:"group"`
+	Status   string `json:"status"`
+	Latency  string `json:"latency"`
+	Error    string `json:"error,omitempty"`
 }
 
 func StartWebServer(mgr *manager.ServiceManager) {
@@ -209,7 +210,7 @@ func StartWebServer(mgr *manager.ServiceManager) {
 			defer wg.Done()
 
 			start := time.Now()
-			res := TestResult{Address: srv.Address, Group: group}
+			res := TestResult{Address: srv.Address, Protocol: srv.Protocol, Group: group}
 
 			c, err := client.NewDNSClient(srv, bootstrapper)
 			if err != nil {
@@ -263,16 +264,31 @@ func StartWebServer(mgr *manager.ServiceManager) {
 			return
 		}
 
-		limit := 100
+		limit := 20
+		page := 1
+
+		if p := r.URL.Query().Get("page"); p != "" {
+			fmt.Sscanf(p, "%d", &page)
+			if page < 1 {
+				page = 1
+			}
+		}
+
+		offset := (page - 1) * limit
 		query := r.URL.Query().Get("q")
 		if query == "" {
 			query = r.URL.Query().Get("ip")
 		}
 
-		logs := mgr.QueryLog.GetLogs(limit, query)
+		logs, total := mgr.QueryLog.GetLogs(offset, limit, query)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(logs)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"data":  logs,
+			"total": total,
+			"page":  page,
+			"limit": limit,
+		})
 	})
 
 	mux.HandleFunc("/api/stats", func(w http.ResponseWriter, r *http.Request) {

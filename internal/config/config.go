@@ -25,7 +25,7 @@ type Config struct {
 type QueryLogConfig struct {
 	Enabled    bool   `yaml:"enabled" json:"enabled"`
 	File       string `yaml:"file" json:"file"`
-	MaxHistory int    `yaml:"max_history" json:"max_history"`
+	MaxSizeMB  int    `yaml:"max_size_mb" json:"max_size_mb"`
 	SaveToFile bool   `yaml:"save_to_file" json:"save_to_file"`
 }
 

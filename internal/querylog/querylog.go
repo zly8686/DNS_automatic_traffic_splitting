@@ -34,20 +34,22 @@ type Stats struct {
 type QueryLogger struct {
 	mu         sync.RWMutex
 	logs       []*LogEntry
-	maxSize    int
+	maxSizeMB  int
 	nextID     int64
 	filePath   string
 	saveToFile bool
 	stats      Stats
 }
 
-func NewQueryLogger(maxSize int, filePath string, saveToFile bool) *QueryLogger {
-	if maxSize <= 0 {
-		maxSize = 5000
+const maxMemoryLogs = 5000
+
+func NewQueryLogger(maxSizeMB int, filePath string, saveToFile bool) *QueryLogger {
+	if maxSizeMB <= 0 {
+		maxSizeMB = 1
 	}
 	l := &QueryLogger{
-		logs:       make([]*LogEntry, 0, maxSize),
-		maxSize:    maxSize,
+		logs:       make([]*LogEntry, 0, maxMemoryLogs),
+		maxSizeMB:  maxSizeMB,
 		nextID:     1,
 		filePath:   filePath,
 		saveToFile: saveToFile,
@@ -119,12 +121,17 @@ func (l *QueryLogger) updateStats(entry *LogEntry) {
 
 func (l *QueryLogger) addToMemory(entry *LogEntry) {
 	l.logs = append(l.logs, entry)
-	if len(l.logs) > l.maxSize {
+	if len(l.logs) > maxMemoryLogs {
 		l.logs = l.logs[1:]
 	}
 }
 
 func (l *QueryLogger) appendToFile(entry LogEntry) {
+	fi, err := os.Stat(l.filePath)
+	if err == nil && fi.Size() >= int64(l.maxSizeMB)*1024*1024 {
+		os.Rename(l.filePath, l.filePath+".old")
+	}
+
 	data, err := json.Marshal(entry)
 	if err != nil {
 		return
@@ -144,12 +151,12 @@ func (l *QueryLogger) appendToFile(entry LogEntry) {
 	f.WriteString("\n")
 }
 
-func (l *QueryLogger) GetLogs(limit int, search string) []*LogEntry {
+func (l *QueryLogger) GetLogs(offset, limit int, search string) ([]*LogEntry, int64) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
-	result := make([]*LogEntry, 0, limit)
-	count := 0
+	var result []*LogEntry
+	var count int64 = 0
 	searchLower := strings.ToLower(search)
 
 	for i := len(l.logs) - 1; i >= 0; i-- {
@@ -167,14 +174,13 @@ func (l *QueryLogger) GetLogs(limit int, search string) []*LogEntry {
 			}
 		}
 
-		result = append(result, entry)
-		count++
-		if count >= limit {
-			break
+		if count >= int64(offset) && len(result) < limit {
+			result = append(result, entry)
 		}
+		count++
 	}
 
-	return result
+	return result, count
 }
 
 func (l *QueryLogger) GetStats() Stats {
@@ -197,5 +203,5 @@ func (l *QueryLogger) GetStats() Stats {
 func (l *QueryLogger) Clear() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	l.logs = make([]*LogEntry, 0, l.maxSize)
+	l.logs = make([]*LogEntry, 0, maxMemoryLogs)
 }

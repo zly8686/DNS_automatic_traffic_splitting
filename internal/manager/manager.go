@@ -35,7 +35,7 @@ type ServiceManager struct {
 func NewServiceManager(initialCfg *config.Config) *ServiceManager {
 	return &ServiceManager{
 		Config:   initialCfg,
-		QueryLog: querylog.NewQueryLogger(initialCfg.QueryLog.MaxHistory, initialCfg.QueryLog.File, initialCfg.QueryLog.SaveToFile),
+		QueryLog: querylog.NewQueryLogger(initialCfg.QueryLog.MaxSizeMB, initialCfg.QueryLog.File, initialCfg.QueryLog.SaveToFile),
 	}
 }
 
@@ -129,7 +129,7 @@ func (m *ServiceManager) startInternal() error {
 	if cfg.QueryLog.SaveToFile && logFile == "" {
 		logFile = "query.log"
 	}
-	m.QueryLog = querylog.NewQueryLogger(cfg.QueryLog.MaxHistory, logFile, cfg.QueryLog.SaveToFile)
+	m.QueryLog = querylog.NewQueryLogger(cfg.QueryLog.MaxSizeMB, logFile, cfg.QueryLog.SaveToFile)
 
 	m.Router = router.NewRouter(cfg, geoManager, m.QueryLog)
 

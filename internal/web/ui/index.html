@@ -5,201 +5,416 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DoH AutoProxy Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        glass: {
+                            100: 'rgba(255, 255, 255, 0.1)',
+                            200: 'rgba(255, 255, 255, 0.2)',
+                            300: 'rgba(255, 255, 255, 0.3)',
+                            400: 'rgba(255, 255, 255, 0.4)',
+                            500: 'rgba(255, 255, 255, 0.5)',
+                            600: 'rgba(255, 255, 255, 0.6)',
+                            700: 'rgba(255, 255, 255, 0.7)',
+                            800: 'rgba(255, 255, 255, 0.8)',
+                            900: 'rgba(255, 255, 255, 0.9)',
+                        },
+                        darkglass: {
+                            100: 'rgba(15, 23, 42, 0.3)',
+                            200: 'rgba(15, 23, 42, 0.5)',
+                            300: 'rgba(15, 23, 42, 0.7)',
+                            400: 'rgba(15, 23, 42, 0.8)',
+                        }
+                    },
+                    backdropBlur: {
+                        xs: '2px',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .sidebar-link { position: relative; display: flex; align-items: center; padding: 0.75rem 1.5rem; color: #9ca3af; transition: all 0.2s; font-weight: 500; }
-        .sidebar-link:hover { color: #f3f4f6; background-color: rgba(255,255,255,0.05); }
-        .sidebar-link.active { color: #10b981; background-color: rgba(16, 185, 129, 0.1); border-right: 3px solid #10b981; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #ffffff;
+            min-height: 100vh;
+        }
+        .dark body {
+            background-color: #020617;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .dark .glass-card {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .dark .glass-header {
+            background: rgba(15, 23, 42, 0.9);
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .glass-sidebar {
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+        }
+        .dark .glass-sidebar {
+            background: #0f172a;
+            border-right: 1px solid #1e293b;
+        }
+
+        .btn-glass {
+            position: relative;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .btn-glass::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: 0.5s;
+        }
+        .btn-glass:hover::before {
+            left: 100%;
+        }
+        .btn-glass:hover {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+        .btn-glass:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-glass-primary {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.9));
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .btn-glass-primary {
+             background: linear-gradient(135deg, rgba(14, 165, 233, 0.7), rgba(56, 189, 248, 0.8));
+        }
+        .btn-glass-primary:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 1.0));
+        }
+
+        .btn-glass-secondary {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.8), rgba(79, 70, 229, 0.9));
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .btn-glass-secondary {
+             background: linear-gradient(135deg, rgba(129, 140, 248, 0.7), rgba(99, 102, 241, 0.8));
+        }
+        .btn-glass-secondary:hover {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(79, 70, 229, 1.0));
+        }
+
+        .list-move,
+        .list-enter-active,
+        .list-leave-active {
+            transition: all 0.3s ease;
+        }
+        .list-enter-from,
+        .list-leave-to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        .list-leave-active {
+            position: absolute;
+        }
+        .dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            z-index: 100;
+        }
+
+        .sidebar-link { position: relative; display: flex; align-items: center; padding: 0.75rem 1.5rem; color: #64748b; transition: all 0.2s; font-weight: 500; }
+        .dark .sidebar-link { color: #94a3b8; }
+        .sidebar-link:hover { color: #2563eb; background-color: #e2e8f0; }
+        .dark .sidebar-link:hover { color: #38bdf8; background-color: #1e293b; }
+        .sidebar-link.active { color: #2563eb; background-color: #dbeafe; border-right: 3px solid #2563eb; }
+        .dark .sidebar-link.active { color: #38bdf8; background-color: rgba(56, 189, 248, 0.15); border-right: 3px solid #38bdf8; }
         .sidebar-link i { width: 1.5rem; text-align: center; margin-right: 0.75rem; }
         
         .toggle-checkbox { appearance: none; background: #fff; border-width: 0; width: 1.25rem; height: 1.25rem; border-radius: 50%; position: absolute; top: 0.125rem; left: 0.125rem; transition: transform 0.3s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-        .toggle-track { width: 2.75rem; height: 1.5rem; background: #e5e7eb; border-radius: 999px; position: relative; transition: background 0.3s ease; cursor: pointer; }
-        .toggle-input:checked + .toggle-track { background: #10b981; }
+        .toggle-track { width: 2.75rem; height: 1.5rem; background: #cbd5e1; border-radius: 999px; position: relative; transition: background 0.3s ease; cursor: pointer; }
+        .dark .toggle-track { background: #475569; }
+        .toggle-input:checked + .toggle-track { background: #2563eb; }
+        .dark .toggle-input:checked + .toggle-track { background: #0ea5e9; }
         .toggle-input:checked + .toggle-track .toggle-checkbox { transform: translateX(1.25rem); }
         
-        .table-container { max-height: calc(100vh - 240px); overflow-y: auto; scrollbar-width: thin; }
+        .table-container { max-height: calc(100vh - 300px); overflow-y: auto; scrollbar-width: thin; }
         .table-container::-webkit-scrollbar { width: 6px; height: 6px; }
-        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
-        .table-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-        thead th { position: sticky; top: 0; z-index: 10; background: #f8fafc; }
+        .table-container::-webkit-scrollbar-track { background: transparent; }
+        .table-container::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 3px; }
+        thead th { position: sticky; top: 0; z-index: 10; background: rgba(248, 250, 252, 0.95); backdrop-filter: blur(4px); }
+        .dark thead th { background: rgba(30, 41, 59, 0.95); }
         
         .stat-card { transition: transform 0.2s, box-shadow 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.15); }
 
-        .sort-icon { display: inline-block; margin-left: 4px; font-size: 0.75rem; color: #9ca3af; cursor: pointer; }
-        .sort-icon:hover { color: #4b5563; }
-        .sort-icon.active { color: #10b981; }
+        .sort-icon { display: inline-block; margin-left: 4px; font-size: 0.75rem; color: #94a3b8; cursor: pointer; }
+        .sort-icon:hover { color: #475569; }
+        .sort-icon.active { color: #2563eb; }
+
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body>
-<div id="app" class="flex h-screen overflow-hidden text-gray-900">
-    <aside class="w-64 bg-slate-900 flex flex-col flex-shrink-0 shadow-xl z-20">
-        <div class="h-16 flex items-center px-6 bg-slate-950 border-b border-slate-800">
-            <div class="text-green-500 text-2xl mr-2"><i class="fa-solid fa-shield-cat"></i></div>
-            <h1 class="text-xl font-bold tracking-wide text-white">AutoProxy</h1>
+<body class="antialiased">
+<div id="app" class="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
+    <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm md:hidden transition-opacity"></div>
+
+    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'" class="fixed inset-y-0 left-0 z-40 w-64 glass-sidebar flex flex-col flex-shrink-0 shadow-2xl transition-transform duration-300 ease-in-out">
+        <div class="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
+            <div class="text-blue-600 dark:text-sky-400 text-2xl mr-2"><i class="fa-solid fa-shield-halved"></i></div>
+            <h1 class="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100">AutoProxy</h1>
         </div>
         
         <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
-            <a href="#" @click.prevent="currentView = 'dashboard'" :class="{'active': currentView === 'dashboard'}" class="sidebar-link">
+            <a href="#" @click.prevent="currentView = 'dashboard'; sidebarOpen = false" :class="{'active': currentView === 'dashboard'}" class="sidebar-link">
                 <i class="fa-solid fa-chart-pie"></i>
                 <span>{{ t('menu_dashboard') }}</span>
             </a>
-            <a href="#" @click.prevent="currentView = 'logs'" :class="{'active': currentView === 'logs'}" class="sidebar-link">
+            <a href="#" @click.prevent="currentView = 'logs'; sidebarOpen = false" :class="{'active': currentView === 'logs'}" class="sidebar-link">
                 <i class="fa-solid fa-list-check"></i>
                 <span>{{ t('menu_logs') }}</span>
             </a>
-            <a href="#" @click.prevent="currentView = 'settings'" :class="{'active': currentView === 'settings'}" class="sidebar-link">
+            <a href="#" @click.prevent="currentView = 'settings'; sidebarOpen = false" :class="{'active': currentView === 'settings'}" class="sidebar-link">
                 <i class="fa-solid fa-sliders"></i>
                 <span>{{ t('menu_settings') }}</span>
             </a>
         </nav>
 
-        <div class="p-4 border-t border-slate-800 bg-slate-950">
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-slate-500 font-mono">v1.4.0</span>
-                <button @click="toggleLang" class="text-xs font-bold text-slate-400 hover:text-white border border-slate-700 rounded px-2 py-1 transition-colors uppercase tracking-wider">{{ lang }}</button>
+        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+            <div class="flex items-center justify-between mb-3">
+                <a href="https://github.com/Hamster-Prime/DNS_automatic_traffic_splitting" target="_blank" class="text-xs text-slate-500 dark:text-slate-400 font-mono hover:text-blue-600 dark:hover:text-blue-400 transition-colors">latest</a>
+                <button @click="toggleLang" class="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 transition-colors uppercase tracking-wider">{{ lang }}</button>
             </div>
+            <button @click="toggleTheme" class="w-full py-2 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
+                <i class="fa-solid mr-2" :class="isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-slate-500'"></i>
+                <span>{{ isDark ? t('theme_light') : t('theme_dark') }}</span>
+            </button>
         </div>
     </aside>
 
-    <div class="flex-1 flex flex-col min-w-0 bg-gray-50">
-        <header class="bg-white shadow-sm h-16 flex items-center justify-between px-8 z-10">
-            <h2 class="text-xl font-bold text-gray-800">{{ t('menu_' + currentView) }}</h2>
-            <div class="flex items-center space-x-6">
-                <div class="flex items-center px-3 py-1 bg-green-50 rounded-full border border-green-100">
+    <div class="flex flex-col min-h-screen md:pl-64 transition-all duration-300">
+        <header class="glass-header h-16 flex items-center justify-between px-4 md:px-8 z-20 shadow-sm sticky top-0">
+            <div class="flex items-center">
+                <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-4 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ t('menu_' + currentView) }}</h2>
+            </div>
+            
+            <div class="flex items-center space-x-3 md:space-x-6">
+                <div class="flex items-center px-3 py-1 bg-green-50 dark:bg-green-950/30 rounded-full border border-green-200 dark:border-green-800 hidden sm:flex">
                     <span class="relative flex h-2 w-2 mr-2">
                       <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <span class="text-sm font-medium text-green-700">{{ t('status_running') }}</span>
+                    <span class="text-sm font-medium text-green-700 dark:text-green-400">{{ t('status_running') }}</span>
                 </div>
                 
-                <button v-if="authEnabled && !isLoggedIn" @click="openLogin" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center">
-                    <i class="fa-solid fa-right-to-bracket mr-2"></i> {{ t('login') }}
+                <button v-if="authEnabled && !isLoggedIn" @click="openLogin" class="btn-glass btn-glass-primary px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center">
+                    <i class="fa-solid fa-right-to-bracket mr-2 md:mr-0"></i> <span class="hidden md:inline ml-2">{{ t('login') }}</span>
                 </button>
-                <button v-if="authEnabled && isLoggedIn" @click="doLogout" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center">
-                    <i class="fa-solid fa-right-from-bracket mr-2"></i> {{ t('logout') }}
+                <button v-if="authEnabled && isLoggedIn" @click="doLogout" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center hover:bg-white/80 dark:hover:bg-slate-700/80">
+                    <i class="fa-solid fa-right-from-bracket mr-2 md:mr-0"></i> <span class="hidden md:inline">{{ t('logout') }}</span>
                 </button>
 
-                <button v-if="currentView === 'settings' && (!authEnabled || isLoggedIn)" @click="saveConfig" :disabled="loading" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center disabled:opacity-50">
-                    <i class="fa-solid fa-save mr-2"></i> {{ loading ? t('saving') : t('save_apply') }}
+                <button v-if="currentView === 'settings' && (!authEnabled || isLoggedIn)" @click="saveConfig" :disabled="loading" class="btn-glass btn-glass-primary px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center disabled:opacity-50">
+                    <i class="fa-solid fa-save mr-2 md:mr-0"></i> <span class="hidden md:inline">{{ loading ? t('saving') : t('save_apply') }}</span>
                 </button>
                 
-                <button v-if="currentView === 'logs'" @click="fetchLogs" class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-4 py-2 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center">
-                    <i class="fa-solid fa-rotate mr-2"></i> {{ t('refresh') }}
+                <button v-if="currentView === 'logs'" @click="fetchLogs(1)" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center hover:bg-white/80 dark:hover:bg-slate-700/80">
+                    <i class="fa-solid fa-rotate mr-2"></i> <span class="hidden md:inline">{{ t('refresh') }}</span>
                 </button>
             </div>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-8">
+        <main class="flex-1 p-4 md:p-8">
             
             <div v-if="currentView === 'dashboard'" class="space-y-8 animate-fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-blue-50 opacity-50"></div>
-                        <div class="relative z-10">
-                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">{{ t('stats_total_queries') }}</p>
-                            <div class="flex items-end">
-                                <h3 class="text-3xl font-bold text-gray-900">{{ formatNumber(stats.total_queries) }}</h3>
-                            </div>
-                        </div>
-                        <div class="absolute bottom-4 right-4 text-blue-500 text-2xl opacity-20"><i class="fa-solid fa-database"></i></div>
-                    </div>
-                    
-                    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-purple-50 opacity-50"></div>
-                        <div class="relative z-10">
-                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">{{ t('stats_memory') }}</p>
-                            <div class="flex items-end">
-                                <h3 class="text-3xl font-bold text-gray-900">{{ stats.memory_usage_mb?.toFixed(1) }} <span class="text-lg font-medium text-gray-500">MB</span></h3>
-                            </div>
-                            <p class="text-xs text-gray-400 mt-2 font-mono">{{ stats.num_goroutines }} Goroutines</p>
-                        </div>
-                        <div class="absolute bottom-4 right-4 text-purple-500 text-2xl opacity-20"><i class="fa-solid fa-microchip"></i></div>
-                    </div>
-
-                    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-green-50 opacity-50"></div>
-                        <div class="relative z-10">
-                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">{{ t('stats_uptime') }}</p>
-                            <h3 class="text-2xl font-bold text-gray-900">{{ formatUptime(stats.uptime_seconds) }}</h3>
-                        </div>
-                        <div class="absolute bottom-4 right-4 text-green-500 text-2xl opacity-20"><i class="fa-solid fa-stopwatch"></i></div>
-                    </div>
-
-                    <div class="stat-card bg-white rounded-xl shadow-sm p-6 border border-gray-100 relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-orange-50 opacity-50"></div>
-                        <div class="relative z-10">
-                            <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">{{ t('stats_ports') }}</p>
-                            <div class="space-y-1">
-                                <div class="flex justify-between text-sm" v-if="stats.listen_dns_udp"><span class="text-gray-500">UDP:</span> <span class="font-mono font-medium">{{ stats.listen_dns_udp }}</span></div>
-                                <div class="flex justify-between text-sm" v-if="stats.listen_dns_tcp"><span class="text-gray-500">TCP:</span> <span class="font-mono font-medium">{{ stats.listen_dns_tcp }}</span></div>
-                                <div class="flex justify-between text-sm" v-if="stats.listen_doh"><span class="text-gray-500">DoH:</span> <span class="font-mono font-medium">{{ stats.listen_doh }}</span></div>
-                                <div class="flex justify-between text-sm" v-if="stats.listen_dot"><span class="text-gray-500">DoT:</span> <span class="font-mono font-medium">{{ stats.listen_dot }}</span></div>
-                                <div class="flex justify-between text-sm" v-if="stats.listen_doq"><span class="text-gray-500">DoQ:</span> <span class="font-mono font-medium">{{ stats.listen_doq }}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    <div class="stat-card glass-card rounded-2xl p-6 relative overflow-hidden group">
+                                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-blue-100 dark:bg-blue-900/20 opacity-50 blur-2xl transition-all group-hover:scale-110"></div>
+                                        <div class="absolute top-6 right-6 text-blue-500/20 text-4xl"><i class="fa-solid fa-database"></i></div>
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{{ t('stats_total_queries') }}</p>
+                                            <div class="flex items-end mb-4">
+                                                <h3 class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ formatNumber(stats.total_queries) }}</h3>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 border border-blue-100 dark:border-blue-800/30">
+                                                    <div class="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">CN</div>
+                                                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ formatNumber(stats.total_cn) }}</div>
+                                                </div>
+                                                <div class="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-2 border border-indigo-100 dark:border-indigo-800/30">
+                                                    <div class="text-xs text-indigo-600 dark:text-indigo-400 font-medium mb-1">Overseas</div>
+                                                    <div class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ formatNumber(stats.total_overseas) }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="stat-card glass-card rounded-2xl p-6 relative overflow-hidden group">
+                                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-purple-100 dark:bg-purple-900/20 opacity-50 blur-2xl transition-all group-hover:scale-110"></div>
+                                        <div class="absolute top-6 right-6 text-purple-500/20 text-4xl"><i class="fa-solid fa-microchip"></i></div>
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{{ t('stats_memory') }}</p>
+                                            <div class="flex items-end mb-4">
+                                                <h3 class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ stats.memory_usage_mb?.toFixed(1) }} <span class="text-lg font-medium text-slate-400">MB</span></h3>
+                                            </div>
+                                            <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2 border border-purple-100 dark:border-purple-800/30">
+                                                <div class="flex justify-between items-center">
+                                                    <span class="text-xs text-purple-600 dark:text-purple-400 font-medium">Goroutines</span>
+                                                    <span class="text-sm font-bold text-slate-700 dark:text-slate-200 font-mono">{{ stats.num_goroutines }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                
+                                    <div class="stat-card glass-card rounded-2xl p-6 relative overflow-hidden group">
+                                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/20 opacity-50 blur-2xl transition-all group-hover:scale-110"></div>
+                                        <div class="absolute top-6 right-6 text-green-500/20 text-4xl"><i class="fa-solid fa-stopwatch"></i></div>
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">{{ t('stats_uptime') }}</p>
+                                            <div class="flex items-end mb-4">
+                                                <h3 class="text-3xl font-bold text-slate-800 dark:text-slate-100">{{ formatUptime(stats.uptime_seconds) }}</h3>
+                                            </div>
+                                            <div class="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 border border-green-100 dark:border-green-800/30">
+                                                <div class="text-xs text-green-600 dark:text-green-400 font-medium mb-1">Started At</div>
+                                                <div class="text-xs font-bold text-slate-700 dark:text-slate-200 font-mono truncate">{{ getStartTime(stats.uptime_seconds) }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                
+                                    <div class="stat-card glass-card rounded-2xl p-6 relative overflow-hidden group">
+                                        <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 rounded-full bg-orange-100 dark:bg-orange-900/20 opacity-50 blur-2xl transition-all group-hover:scale-110"></div>
+                                        <div class="absolute top-6 right-6 text-orange-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-network-wired"></i></div>
+                                        <div class="relative z-10">
+                                            <p class="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{{ t('stats_ports') }}</p>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">TCP</span>
+                                                    <span v-if="stats.listen_dns_tcp" class="font-mono font-bold text-sm text-slate-700 dark:text-slate-200">{{ formatListenPort(stats.listen_dns_tcp) }}</span>
+                                                    <span v-else class="text-xs text-slate-400 dark:text-slate-600">{{ t('not_listening') }}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">UDP</span>
+                                                    <span v-if="stats.listen_dns_udp" class="font-mono font-bold text-sm text-slate-700 dark:text-slate-200">{{ formatListenPort(stats.listen_dns_udp) }}</span>
+                                                    <span v-else class="text-xs text-slate-400 dark:text-slate-600">{{ t('not_listening') }}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">DoH</span>
+                                                    <span v-if="stats.listen_doh" class="font-mono font-bold text-sm text-slate-700 dark:text-slate-200">{{ formatListenPort(stats.listen_doh) }}</span>
+                                                    <span v-else class="text-xs text-slate-400 dark:text-slate-600">{{ t('not_listening') }}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">DoT</span>
+                                                    <span v-if="stats.listen_dot" class="font-mono font-bold text-sm text-slate-700 dark:text-slate-200">{{ formatListenPort(stats.listen_dot) }}</span>
+                                                    <span v-else class="text-xs text-slate-400 dark:text-slate-600">{{ t('not_listening') }}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 col-span-2">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">DoQ</span>
+                                                    <span v-if="stats.listen_doq" class="font-mono font-bold text-sm text-slate-700 dark:text-slate-200">{{ formatListenPort(stats.listen_doq) }}</span>
+                                                    <span v-else class="text-xs text-slate-400 dark:text-slate-600">{{ t('not_listening') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="absolute top-6 right-6 text-orange-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-network-wired"></i></div>
+                                    </div>
+                                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                        <h3 class="text-lg font-bold text-gray-800 mb-6 flex items-center"><i class="fa-solid fa-chart-pie mr-2 text-indigo-500"></i> {{ t('stats_traffic_distribution') }}</h3>
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center"><i class="fa-solid fa-chart-pie mr-2 text-blue-500"></i> {{ t('stats_traffic_distribution') }}</h3>
                         <div class="space-y-6">
                             <div>
                                 <div class="flex justify-between text-sm mb-2">
-                                    <span class="font-medium text-gray-700 flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span> CN (Domestic)</span>
-                                    <span class="font-bold text-gray-900">{{ stats.total_cn }}</span>
+                                    <span class="font-medium text-slate-700 dark:text-slate-300 flex items-center"><span class="w-2 h-2 rounded-full bg-green-500 mr-2"></span> CN (Domestic)</span>
+                                    <span class="font-bold text-slate-900 dark:text-white">{{ stats.total_cn }}</span>
                                 </div>
-                                <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                    <div class="bg-green-500 h-3 rounded-full transition-all duration-500" :style="{width: getPercentage(stats.total_cn, stats.total_queries) + '%'}"></div>
+                                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                                    <div class="bg-green-500 h-3 rounded-full transition-all duration-1000 ease-out" :style="{width: getPercentage(stats.total_cn, stats.total_queries) + '%'}"></div>
                                 </div>
-                                <div class="text-right text-xs text-gray-500 mt-1">{{ getPercentage(stats.total_cn, stats.total_queries) }}%</div>
+                                <div class="text-right text-xs text-slate-500 mt-1">{{ getPercentage(stats.total_cn, stats.total_queries) }}%</div>
                             </div>
                             <div>
                                 <div class="flex justify-between text-sm mb-2">
-                                    <span class="font-medium text-gray-700 flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span> Overseas</span>
-                                    <span class="font-bold text-gray-900">{{ stats.total_overseas }}</span>
+                                    <span class="font-medium text-slate-700 dark:text-slate-300 flex items-center"><span class="w-2 h-2 rounded-full bg-blue-500 mr-2"></span> Overseas</span>
+                                    <span class="font-bold text-slate-900 dark:text-white">{{ stats.total_overseas }}</span>
                                 </div>
-                                <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                                    <div class="bg-blue-500 h-3 rounded-full transition-all duration-500" :style="{width: getPercentage(stats.total_overseas, stats.total_queries) + '%'}"></div>
+                                <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-3 overflow-hidden">
+                                    <div class="bg-blue-500 h-3 rounded-full transition-all duration-1000 ease-out" :style="{width: getPercentage(stats.total_overseas, stats.total_queries) + '%'}"></div>
                                 </div>
-                                <div class="text-right text-xs text-gray-500 mt-1">{{ getPercentage(stats.total_overseas, stats.total_queries) }}%</div>
+                                <div class="text-right text-xs text-slate-500 mt-1">{{ getPercentage(stats.total_overseas, stats.total_queries) }}%</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:col-span-2 flex flex-col">
-                         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-server mr-2 text-indigo-500"></i> {{ t('stats_upstream_perf') }}</h3>
+                    <div class="glass-card rounded-2xl p-6 lg:col-span-2 flex flex-col">
+                         <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center"><i class="fa-solid fa-server mr-2 text-blue-500"></i> {{ t('stats_upstream_perf') }}</h3>
                          
                          <div class="overflow-auto flex-1 max-h-96 pr-2 custom-scrollbar">
-                            <table class="min-w-full text-sm">
-                                <thead class="bg-gray-50 text-gray-500 sticky top-0 z-10 shadow-sm">
+                            <table class="min-w-full text-sm text-left">
+                                <thead class="text-slate-500 dark:text-slate-400 sticky top-0 z-10">
                                     <tr>
-                                        <th class="py-2 px-3 text-left font-medium">{{ t('table_server') }}</th>
-                                        <th class="py-2 px-3 text-left font-medium">{{ t('table_group') }}</th>
-                                        <th class="py-2 px-3 text-right font-medium">{{ t('table_queries') }}</th>
-                                        <th class="py-2 px-3 text-right font-medium">{{ t('table_errors') }}</th>
-                                        <th class="py-2 px-3 text-right font-medium">{{ t('table_canceled') }}</th>
-                                        <th class="py-2 px-3 text-right font-medium">{{ t('table_avg_time') }}</th>
+                                        <th class="py-3 px-3 font-medium rounded-l-lg">{{ t('table_server') }}</th>
+                                        <th class="py-3 px-3 font-medium">{{ t('table_group') }}</th>
+                                        <th class="py-3 px-3 text-right font-medium">{{ t('table_queries') }}</th>
+                                        <th class="py-3 px-3 text-right font-medium">{{ t('table_errors') }}</th>
+                                        <th class="py-3 px-3 text-right font-medium">{{ t('table_canceled') }}</th>
+                                        <th class="py-3 px-3 text-right font-medium rounded-r-lg">{{ t('table_avg_time') }}</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    <tr v-for="s in stats.upstream_stats" :key="s.address" class="hover:bg-gray-50 transition-colors">
-                                        <td class="py-2 px-3 font-mono text-xs text-gray-600 truncate max-w-[150px]" :title="s.address">{{ s.address }} <span class="text-[10px] text-gray-400 ml-1">{{ s.protocol }}</span></td>
-                                        <td class="py-2 px-3">
-                                            <span class="px-2 py-0.5 rounded text-xs font-medium" :class="s.group === 'CN' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'">{{ s.group }}</span>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tr v-for="s in stats.upstream_stats" :key="s.address" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        <td class="py-3 px-3 font-mono text-xs text-slate-600 dark:text-slate-300 truncate max-w-[150px]" :title="s.address">{{ s.address }} <span class="text-[10px] text-slate-400 ml-1 uppercase">{{ s.protocol }}</span></td>
+                                        <td class="py-3 px-3">
+                                            <span class="px-2 py-0.5 rounded-md text-xs font-medium border" :class="s.group === 'CN' ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800'">{{ s.group }}</span>
                                         </td>
-                                        <td class="py-2 px-3 text-right font-mono">{{ s.total_queries }}</td>
-                                        <td class="py-2 px-3 text-right font-mono text-red-500 font-medium">{{ s.total_errors > 0 ? s.total_errors : '-' }}</td>
-                                        <td class="py-2 px-3 text-right font-mono text-gray-400">{{ s.total_canceled > 0 ? s.total_canceled : '-' }}</td>
-                                        <td class="py-2 px-3 text-right font-mono font-medium" :class="getLatencyClass(s.avg_duration_ms)">{{ s.avg_duration_ms }} ms</td>
-                                    </tr>
-                                    <tr v-if="!stats.upstream_stats || stats.upstream_stats.length === 0">
-                                        <td colspan="6" class="py-8 text-center text-gray-400 italic">No upstream data available yet...</td>
+                                        <td class="py-3 px-3 text-right font-mono text-slate-700 dark:text-slate-300">{{ s.total_queries }}</td>
+                                        <td class="py-3 px-3 text-right font-mono text-red-500 font-medium">{{ s.total_errors > 0 ? s.total_errors : '-' }}</td>
+                                        <td class="py-3 px-3 text-right font-mono text-slate-400">{{ s.total_canceled > 0 ? s.total_canceled : '-' }}</td>
+                                        <td class="py-3 px-3 text-right font-mono font-medium" :class="getLatencyClass(s.avg_duration_ms)">{{ s.avg_duration_ms }} ms</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -208,96 +423,96 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6" v-if="sortedTopClients.length > 0">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-users mr-2 text-indigo-500"></i> {{ t('top_clients') }}</h3>
+                     <div class="glass-card rounded-2xl p-6" v-if="sortedTopClients.length > 0">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center"><i class="fa-solid fa-users mr-2 text-blue-500"></i> {{ t('top_clients') }}</h3>
                         <ul class="space-y-3">
-                            <li v-for="(client, idx) in sortedTopClients.slice(0, 5)" :key="client[0]" class="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded transition-colors">
+                            <li v-for="(client, idx) in sortedTopClients.slice(0, 5)" :key="client[0]" class="flex justify-between items-center text-sm p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
                                 <div class="flex items-center overflow-hidden">
-                                    <span class="text-gray-400 font-mono mr-3 w-4 text-right">{{ idx + 1 }}</span>
-                                    <span class="text-gray-700 font-medium truncate" :title="client[0]">{{ client[0] }}</span>
+                                    <span class="text-slate-400 font-mono mr-3 w-4 text-right">{{ idx + 1 }}</span>
+                                    <span class="text-slate-700 dark:text-slate-300 font-medium truncate" :title="client[0]">{{ client[0] }}</span>
                                 </div>
-                                <span class="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs">{{ client[1] }}</span>
+                                <span class="font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded text-xs">{{ client[1] }}</span>
                             </li>
                         </ul>
                      </div>
                      
-                     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6" v-if="sortedTopDomains.length > 0">
-                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-globe mr-2 text-indigo-500"></i> {{ t('top_domains') }}</h3>
+                     <div class="glass-card rounded-2xl p-6" v-if="sortedTopDomains.length > 0">
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 flex items-center"><i class="fa-solid fa-globe mr-2 text-purple-500"></i> {{ t('top_domains') }}</h3>
                         <ul class="space-y-3">
-                            <li v-for="(domain, idx) in sortedTopDomains.slice(0, 5)" :key="domain[0]" class="flex justify-between items-center text-sm p-2 hover:bg-gray-50 rounded transition-colors">
+                            <li v-for="(domain, idx) in sortedTopDomains.slice(0, 5)" :key="domain[0]" class="flex justify-between items-center text-sm p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
                                 <div class="flex items-center overflow-hidden">
-                                    <span class="text-gray-400 font-mono mr-3 w-4 text-right">{{ idx + 1 }}</span>
-                                    <span class="text-gray-700 font-medium truncate" :title="domain[0]">{{ domain[0] }}</span>
+                                    <span class="text-slate-400 font-mono mr-3 w-4 text-right">{{ idx + 1 }}</span>
+                                    <span class="text-slate-700 dark:text-slate-300 font-medium truncate" :title="domain[0]">{{ domain[0] }}</span>
                                 </div>
-                                <span class="font-mono font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded text-xs">{{ domain[1] }}</span>
+                                <span class="font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded text-xs">{{ domain[1] }}</span>
                             </li>
                         </ul>
                      </div>
                 </div>
             </div>
 
-            <div v-if="currentView === 'logs'" class="bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden animate-fade-in">
-                <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                    <div class="flex items-center gap-2 text-gray-700">
+            <div v-if="currentView === 'logs'" class="glass-card rounded-2xl flex flex-col h-full overflow-hidden animate-fade-in shadow-lg">
+                <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-between items-center backdrop-blur-sm">
+                    <div class="flex items-center gap-2 text-slate-700 dark:text-slate-200">
                          <i class="fa-solid fa-list-ul"></i> <span class="font-medium">{{ t('logs_title') }}</span>
                     </div>
                     <div class="flex gap-2 w-full max-w-md">
                         <div class="relative flex-1">
-                            <input v-model="logsFilter" :placeholder="t('filter_logs_placeholder')" @keyup.enter="fetchLogs" class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-1.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all">
-                            <i class="fa-solid fa-search absolute left-3 top-2 text-gray-400 text-xs"></i>
+                            <input v-model="logsFilter" :placeholder="t('filter_logs_placeholder')" @keyup.enter="fetchLogs(1)" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 dark:text-white rounded-lg pl-9 pr-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-slate-400">
+                            <i class="fa-solid fa-search absolute left-3 top-2 text-slate-400 text-xs"></i>
                         </div>
-                        <button @click="fetchLogs" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-sm shadow-sm transition-colors">{{ t('search') }}</button>
+                        <button @click="fetchLogs(1)" class="btn-glass btn-glass-primary px-3 py-1.5 rounded-lg text-sm shadow-sm transition-colors">{{ t('search') }}</button>
                     </div>
                 </div>
-                <div class="flex-1 table-container">
-                    <table class="min-w-full divide-y divide-gray-200 text-sm">
-                        <thead class="bg-gray-50 sticky top-0 z-20 shadow-sm">
+                <div class="flex-1 table-container bg-white dark:bg-slate-950">
+                    <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800 text-sm">
+                        <thead class="text-slate-500 dark:text-slate-400">
                             <tr>
-                                <th @click="sortBy('time')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('time')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_time') }} <i class="sort-icon fa-solid" :class="getSortIcon('time')"></i>
                                 </th>
-                                <th @click="sortBy('client_ip')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('client_ip')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_client') }} <i class="sort-icon fa-solid" :class="getSortIcon('client_ip')"></i>
                                 </th>
-                                <th @click="sortBy('domain')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('domain')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_domain') }} <i class="sort-icon fa-solid" :class="getSortIcon('domain')"></i>
                                 </th>
-                                <th @click="sortBy('type')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('type')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_type') }} <i class="sort-icon fa-solid" :class="getSortIcon('type')"></i>
                                 </th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider">
                                     {{ t('log_answer') }}
                                 </th>
-                                <th @click="sortBy('upstream')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('upstream')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_upstream') }} <i class="sort-icon fa-solid" :class="getSortIcon('upstream')"></i>
                                 </th>
-                                <th @click="sortBy('status')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('status')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_status') }} <i class="sort-icon fa-solid" :class="getSortIcon('status')"></i>
                                 </th>
-                                <th @click="sortBy('duration_ms')" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 group">
+                                <th @click="sortBy('duration_ms')" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider cursor-pointer select-none hover:text-slate-700 dark:hover:text-slate-200 group">
                                     {{ t('log_duration') }} <i class="sort-icon fa-solid" :class="getSortIcon('duration_ms')"></i>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-100">
-                            <tr v-for="log in sortedLogs" :key="log.id" class="hover:bg-blue-50 transition-colors">
-                                <td class="px-4 py-2 whitespace-nowrap text-gray-500 font-mono text-xs">{{ formatTime(log.time) }}</td>
-                                <td class="px-4 py-2 whitespace-nowrap text-indigo-600 cursor-pointer hover:underline font-medium" @click="logsFilter = log.client_ip; fetchLogs()">{{ log.client_ip }}</td>
-                                <td class="px-4 py-2 text-gray-900 font-medium break-all">{{ log.domain }}</td>
-                                <td class="px-4 py-2 text-gray-500 text-xs">{{ log.type }}</td>
-                                <td class="px-4 py-2 text-gray-600 font-mono text-xs truncate max-w-[200px]" :title="log.answer">{{ log.answer }}</td>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                            <tr v-for="log in sortedLogs" :key="log.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                                <td class="px-4 py-2 whitespace-nowrap text-slate-500 dark:text-slate-400 font-mono text-xs">{{ formatTime(log.time) }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-blue-600 dark:text-blue-400 cursor-pointer hover:underline font-medium" @click="logsFilter = log.client_ip; fetchLogs(1)">{{ log.client_ip }}</td>
+                                <td class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium break-all">{{ log.domain }}</td>
+                                <td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">{{ log.type }}</td>
+                                <td class="px-4 py-2 text-slate-600 dark:text-slate-300 font-mono text-xs truncate max-w-[200px]" :title="log.answer">{{ log.answer }}</td>
                                 <td class="px-4 py-2 whitespace-nowrap">
                                     <span class="px-2 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full" :class="getUpstreamClass(log.upstream)">
                                         {{ log.upstream }}
                                     </span>
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap">
-                                    <span class="px-2 py-0.5 rounded text-xs font-bold" :class="log.status === 'NOERROR' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">{{ log.status }}</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold" :class="log.status === 'NOERROR' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'">{{ log.status }}</span>
                                 </td>
-                                <td class="px-4 py-2 whitespace-nowrap text-gray-500 font-mono text-xs">{{ log.duration_ms }}ms</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-slate-500 dark:text-slate-400 font-mono text-xs">{{ log.duration_ms }}ms</td>
                             </tr>
                             <tr v-if="logs.length === 0">
-                                <td colspan="8" class="px-4 py-12 text-center text-gray-400">
+                                <td colspan="8" class="px-4 py-12 text-center text-slate-400">
                                     <i class="fa-solid fa-inbox text-4xl mb-3 opacity-30"></i>
                                     <p>{{ t('no_logs') }}</p>
                                 </td>
@@ -305,110 +520,146 @@
                         </tbody>
                     </table>
                 </div>
+                 <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-between items-center backdrop-blur-sm">
+                     <div class="text-sm text-slate-500 dark:text-slate-400">
+                         Showing <span class="font-medium">{{ (logsPage - 1) * 20 + 1 }}</span> to <span class="font-medium">{{ Math.min(logsPage * 20, logsTotal) }}</span> of <span class="font-medium">{{ logsTotal }}</span> results
+                     </div>
+                     <div class="flex space-x-2">
+                         <button @click="fetchLogs(logsPage - 1)" :disabled="logsPage <= 1" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm hover:bg-white/80 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                             Previous
+                         </button>
+                         <button @click="fetchLogs(logsPage + 1)" :disabled="logsPage * 20 >= logsTotal" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm hover:bg-white/80 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                             Next
+                         </button>
+                     </div>
+                 </div>
             </div>
 
             <div v-if="currentView === 'settings'" class="space-y-8 max-w-5xl mx-auto pb-10 animate-fade-in">
             
-                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
-                        <i class="fa-solid fa-database text-gray-400 mr-3"></i>
-                        <h3 class="text-lg font-medium text-gray-900">{{ t('setting_querylog') }}</h3>
+                 <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                        <i class="fa-solid fa-database text-slate-400 mr-3"></i>
+                        <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_querylog') }}</h3>
                     </div>
-                    <div class="p-6 space-y-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div class="p-6 space-y-6 bg-white dark:bg-slate-950">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
                             <div class="flex flex-col space-y-4">
                                 <toggle-switch :label="t('setting_save_file')" v-model="config.query_log.save_to_file" :disabled="!canEdit"></toggle-switch>
                                 <div v-if="config.query_log.save_to_file">
                                      <form-input :label="t('setting_log_path')" v-model="config.query_log.file" placeholder="query.log" class="transition-all" :disabled="!canEdit"></form-input>
-                                     <p class="text-xs text-gray-500 mt-1">Defaults to 'query.log' if empty.</p>
+                                     <p class="text-xs text-slate-500 mt-1">Defaults to 'query.log' if empty.</p>
                                 </div>
                             </div>
-                            <form-input :label="t('setting_log_limit')" v-model.number="config.query_log.max_history" type="number" :disabled="!canEdit"></form-input>
+                            <form-input :label="t('setting_log_size')" v-model.number="config.query_log.max_size_mb" type="number" placeholder="1" :disabled="!canEdit"></form-input>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
-                        <i class="fa-solid fa-network-wired text-gray-400 mr-3"></i>
-                        <h3 class="text-lg font-medium text-gray-900">{{ t('setting_listen') }}</h3>
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                        <i class="fa-solid fa-network-wired text-slate-400 mr-3"></i>
+                        <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_listen') }}</h3>
                     </div>
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <form-input :label="t('dns_udp')" v-model="config.listen.dns_udp" placeholder=":53" :disabled="!canEdit"></form-input>
-                        <form-input :label="t('dns_tcp')" v-model="config.listen.dns_tcp" placeholder=":53" :disabled="!canEdit"></form-input>
-                        <form-input :label="t('doh_https')" v-model="config.listen.doh" placeholder=":443" :disabled="!canEdit"></form-input>
-                        <form-input :label="t('dot_tls')" v-model="config.listen.dot" placeholder=":853" :disabled="!canEdit"></form-input>
-                        <form-input :label="t('doq_quic')" v-model="config.listen.doq" placeholder=":853" :disabled="!canEdit"></form-input>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 bg-white dark:bg-slate-950">
+                        <form-input :label="t('dns_udp')" v-model="config.listen.dns_udp" placeholder="53" :disabled="!canEdit"></form-input>
+                        <form-input :label="t('dns_tcp')" v-model="config.listen.dns_tcp" placeholder="53" :disabled="!canEdit"></form-input>
+                        <form-input :label="t('doh_https')" v-model="config.listen.doh" placeholder="443" :disabled="!canEdit"></form-input>
+                        <form-input :label="t('dot_tls')" v-model="config.listen.dot" placeholder="853" :disabled="!canEdit"></form-input>
+                        <form-input :label="t('doq_quic')" v-model="config.listen.doq" placeholder="853" :disabled="!canEdit"></form-input>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
-                        <i class="fa-solid fa-rocket text-gray-400 mr-3"></i>
-                        <h3 class="text-lg font-medium text-gray-900">{{ t('setting_bootstrap') }}</h3>
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                        <i class="fa-solid fa-rocket text-slate-400 mr-3"></i>
+                        <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_bootstrap') }}</h3>
                     </div>
-                    <div class="p-6">
+                    <div class="p-6 bg-white dark:bg-slate-950">
                         <div v-for="(dns, index) in config.bootstrap_dns" :key="index" class="flex mb-3 items-center">
                             <div class="flex-1">
-                                <input type="text" v-model="config.bootstrap_dns[index]" class="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border transition-shadow disabled:bg-gray-100 disabled:text-gray-500" placeholder="8.8.8.8:53" :disabled="!canEdit">
+                                <input type="text" v-model="config.bootstrap_dns[index]" class="w-full rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2.5 border transition-shadow disabled:bg-slate-100 disabled:text-slate-500" placeholder="8.8.8.8:53" :disabled="!canEdit">
                             </div>
-                            <button v-if="canEdit" @click="removeBootstrap(index)" class="ml-3 text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 transition-colors"><i class="fa-solid fa-times"></i></button>
+                            <button v-if="canEdit" @click="removeBootstrap(index)" class="ml-3 text-red-400 hover:text-red-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"><i class="fa-solid fa-times"></i></button>
                         </div>
-                        <button v-if="canEdit" @click="addBootstrap" class="mt-2 flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium px-3 py-2 rounded hover:bg-indigo-50 transition-colors"><i class="fa-solid fa-plus mr-1"></i> {{ t('add') }}</button>
+                        <button v-if="canEdit" @click="addBootstrap" class="mt-2 flex items-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium px-3 py-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"><i class="fa-solid fa-plus mr-1"></i> {{ t('add') }}</button>
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                         <div class="flex items-center">
-                            <i class="fa-solid fa-server text-gray-400 mr-3"></i>
-                            <h3 class="text-lg font-medium text-gray-900">{{ t('setting_upstreams') }}</h3>
+                            <i class="fa-solid fa-server text-slate-400 mr-3"></i>
+                            <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_upstreams') }}</h3>
                         </div>
-                        <button @click="testUpstreams" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center">
-                            <i class="fa-solid fa-vial mr-2"></i> {{ t('test_upstreams') }}
-                        </button>
+                        <div class="flex space-x-2">
+                            <button :disabled="!canEdit" @click="toggleSort" class="btn-glass btn-glass-secondary px-3 py-1.5 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center" :class="{'opacity-50 cursor-not-allowed': !canEdit}">
+                                <i class="fa-solid fa-sort mr-2"></i> {{ isSorting ? t('sort_done') : t('sort') }}
+                            </button>
+                            <button :disabled="!canEdit" @click="testUpstreams" class="btn-glass btn-glass-primary px-3 py-1.5 rounded-lg shadow-sm text-sm font-medium transition-all flex items-center" :class="{'opacity-50 cursor-not-allowed': !canEdit}">
+                                <i class="fa-solid fa-vial mr-2"></i> {{ t('test_upstreams') }}
+                            </button>
+                        </div>
                     </div>
-                    <div class="p-6">
-                        <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 w-fit">
-                            <button @click="upstreamTab = 'cn'" class="px-4 py-2 rounded-md text-sm font-medium transition-all" :class="upstreamTab === 'cn' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">{{ t('tab_cn') }}</button>
-                            <button @click="upstreamTab = 'overseas'" class="px-4 py-2 rounded-md text-sm font-medium transition-all" :class="upstreamTab === 'overseas' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'">{{ t('tab_overseas') }}</button>
+                    <div class="p-6 bg-white dark:bg-slate-950">
+                        <div class="flex space-x-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-lg mb-6 w-fit">
+                            <button @click="upstreamTab = 'cn'" class="px-4 py-2 rounded-md text-sm font-medium transition-all" :class="upstreamTab === 'cn' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">{{ t('tab_cn') }}</button>
+                            <button @click="upstreamTab = 'overseas'" class="px-4 py-2 rounded-md text-sm font-medium transition-all" :class="upstreamTab === 'overseas' ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'">{{ t('tab_overseas') }}</button>
                         </div>
 
                         <div class="space-y-4">
-                            <div v-for="(server, index) in currentUpstreams" :key="index" class="bg-gray-50 rounded-xl p-5 border border-gray-200 relative group hover:border-indigo-300 transition-colors">
-                                <button v-if="canEdit" @click="removeUpstream(upstreamTab, index)" class="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-white shadow-sm opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash-can"></i></button>
-                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    <form-input :label="t('address')" v-model="server.address" placeholder="1.1.1.1:53" :disabled="!canEdit"></form-input>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('protocol') }}</label>
-                                        <select :disabled="!canEdit" v-model="server.protocol" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg border shadow-sm bg-white disabled:bg-gray-100 disabled:text-gray-500">
-                                            <option value="udp">UDP</option>
-                                            <option value="tcp">TCP</option>
-                                            <option value="doh">DoH</option>
-                                            <option value="dot">DoT</option>
-                                            <option value="doq">DoQ</option>
-                                        </select>
+                            <transition-group name="list" tag="div" class="space-y-4">
+                                <div v-for="(server, index) in currentUpstreams" :key="server._id" 
+                                    class="bg-slate-50 dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 relative group hover:border-blue-300 dark:hover:border-blue-700 transition-colors"
+                                    :class="{'cursor-move': isSorting, 'dragging': draggedIndex === index}"
+                                    :draggable="isSorting"
+                                    @dragstart="onDragStart(index, $event)"
+                                    @dragover.prevent
+                                    @dragenter="onDragEnter(index)"
+                                    @dragend="onDragEnd"
+                                >
+                                    <div v-if="!isSorting" class="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button v-if="canEdit" @click="removeUpstream(upstreamTab, index)" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white dark:hover:bg-slate-800 shadow-sm" title="Delete">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
                                     </div>
-                                    <form-input :label="t('ecs_ip')" v-model="server.ecs_ip" placeholder="Client Subnet IP" :disabled="!canEdit"></form-input>
+                                    <div v-if="isSorting" class="absolute top-3 right-3 text-slate-400">
+                                        <i class="fa-solid fa-grip-lines"></i>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" :class="{'pointer-events-none opacity-80': isSorting}">
+                                        <form-input :label="t('address')" v-model="server.address" placeholder="1.1.1.1:53" :disabled="!canEdit"></form-input>
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ t('protocol') }}</label>
+                                            <select :disabled="!canEdit" v-model="server.protocol" class="block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border shadow-sm bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500">
+                                                <option value="udp">UDP</option>
+                                                <option value="tcp">TCP</option>
+                                                <option value="doh">DoH</option>
+                                                <option value="dot">DoT</option>
+                                                <option value="doq">DoQ</option>
+                                            </select>
+                                        </div>
+                                        <form-input :label="t('ecs_ip')" v-model="server.ecs_ip" placeholder="Client Subnet IP" :disabled="!canEdit"></form-input>
+                                    </div>
+                                    <div class="mt-4 flex flex-wrap gap-6 pt-4 border-t border-slate-200 dark:border-slate-800" :class="{'pointer-events-none opacity-80': isSorting}">
+                                        <toggle-switch v-if="showPipeline(server.protocol)" label="Pipeline" v-model="server.pipeline" :disabled="!canEdit"></toggle-switch>
+                                        <toggle-switch v-if="showH3(server.protocol)" label="HTTP/3" v-model="server.http3" :disabled="!canEdit"></toggle-switch>
+                                        <toggle-switch v-if="showVerify(server.protocol)" label="Skip Verify" v-model="server.insecure_skip_verify" :disabled="!canEdit"></toggle-switch>
+                                    </div>
                                 </div>
-                                <div class="mt-4 flex flex-wrap gap-6 pt-4 border-t border-gray-200">
-                                    <toggle-switch v-if="showPipeline(server.protocol)" label="Pipeline" v-model="server.pipeline" :disabled="!canEdit"></toggle-switch>
-                                    <toggle-switch v-if="showH3(server.protocol)" label="HTTP/3" v-model="server.http3" :disabled="!canEdit"></toggle-switch>
-                                    <toggle-switch v-if="showVerify(server.protocol)" label="Skip Verify" v-model="server.insecure_skip_verify" :disabled="!canEdit"></toggle-switch>
-                                </div>
-                            </div>
-                            <button v-if="canEdit" @click="addUpstream(upstreamTab)" class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-indigo-500 hover:text-indigo-500 hover:bg-indigo-50 transition-all font-medium flex items-center justify-center"><i class="fa-solid fa-plus-circle mr-2"></i> {{ t('add_server') }}</button>
+                            </transition-group>
+                            <button v-if="canEdit && !isSorting" @click="addUpstream(upstreamTab)" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all font-medium flex items-center justify-center"><i class="fa-solid fa-plus-circle mr-2"></i> {{ t('add_server') }}</button>
                         </div>
                     </div>
                 </div>
 
                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
-                            <i class="fa-solid fa-earth-asia text-gray-400 mr-3"></i>
-                            <h3 class="text-lg font-medium text-gray-900">Geo Data</h3>
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                            <i class="fa-solid fa-earth-asia text-slate-400 mr-3"></i>
+                            <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">Geo Data</h3>
                         </div>
-                        <div class="p-6 space-y-5">
+                        <div class="p-6 space-y-5 bg-white dark:bg-slate-950">
                             <form-input label="GeoIP File" v-model="config.geo_data.geoip_dat" :disabled="!canEdit"></form-input>
                             <form-input label="GeoSite File" v-model="config.geo_data.geosite_dat" :disabled="!canEdit"></form-input>
                             <form-input label="GeoIP URL" v-model="config.geo_data.geoip_download_url" class="text-sm" :disabled="!canEdit"></form-input>
@@ -416,22 +667,22 @@
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center">
-                            <i class="fa-solid fa-certificate text-gray-400 mr-3"></i>
-                            <h3 class="text-lg font-medium text-gray-900">Auto Certificate (ACME)</h3>
+                    <div class="glass-card rounded-2xl overflow-hidden">
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                            <i class="fa-solid fa-certificate text-slate-400 mr-3"></i>
+                            <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">Auto Certificate (ACME)</h3>
                         </div>
-                        <div class="p-6 space-y-5">
+                        <div class="p-6 space-y-5 bg-white dark:bg-slate-950">
                             <toggle-switch label="Enable AutoCert" v-model="config.auto_cert.enabled" :disabled="!canEdit"></toggle-switch>
                             <template v-if="config.auto_cert.enabled">
                                 <form-input label="Email" v-model="config.auto_cert.email" :disabled="!canEdit"></form-input>
                                 <div class="mb-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Domains</label>
+                                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Domains</label>
                                     <div v-for="(d, i) in config.auto_cert.domains" :key="i" class="flex mb-2">
-                                        <input v-model="config.auto_cert.domains[i]" class="flex-1 rounded-lg border-gray-300 p-2.5 text-sm border shadow-sm" placeholder="example.com" :disabled="!canEdit">
+                                        <input v-model="config.auto_cert.domains[i]" class="flex-1 rounded-lg border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 dark:text-white p-2.5 text-sm border shadow-sm" placeholder="example.com" :disabled="!canEdit">
                                         <button v-if="canEdit" @click="config.auto_cert.domains.splice(i, 1)" class="ml-2 text-red-400 hover:text-red-600 w-8 flex justify-center items-center"><i class="fa-solid fa-times"></i></button>
                                     </div>
-                                    <button v-if="canEdit" @click="config.auto_cert.domains.push('')" class="mt-1 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center"><i class="fa-solid fa-plus mr-1"></i> Add Domain</button>
+                                    <button v-if="canEdit" @click="config.auto_cert.domains.push('')" class="mt-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium flex items-center"><i class="fa-solid fa-plus mr-1"></i> Add Domain</button>
                                 </div>
                                 <form-input label="Cert Storage Dir" v-model="config.auto_cert.cert_dir" :disabled="!canEdit"></form-input>
                             </template>
@@ -441,43 +692,45 @@
             </div>
         </main>
         
-        <modal :show="modal.show" :title="modal.title" @close="modal.show = false">
+        <modal :show="modal.show" :title="modal.title" :max-width="modal.maxWidth" @close="modal.show = false">
             <div v-if="modal.type === 'saving'" class="flex flex-col items-center justify-center py-4">
-                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-500 mb-4"></i>
-                <p class="text-gray-600">{{ t('saving') }}</p>
+                <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
+                <p class="text-slate-600 dark:text-slate-400">{{ t('saving') }}</p>
             </div>
             
             <div v-if="modal.type === 'saved'" class="text-center">
-                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                    <i class="fa-solid fa-check text-green-600 text-xl"></i>
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/50 mb-4">
+                    <i class="fa-solid fa-check text-green-600 dark:text-green-400 text-xl"></i>
                 </div>
-                <p class="text-sm text-gray-500">{{ t('saved_msg') }}</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('saved_msg') }}</p>
             </div>
             
             <div v-if="modal.type === 'testing'" class="flex flex-col items-center justify-center py-4">
                 <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
-                <p class="text-gray-600">{{ t('testing') }}</p>
+                <p class="text-slate-600 dark:text-slate-400">{{ t('testing') }}</p>
             </div>
             
             <div v-if="modal.type === 'test'" class="max-h-96 overflow-y-auto">
-                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50 sticky top-0">
+                <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-sm">
+                    <thead class="bg-slate-50 dark:bg-slate-800 sticky top-0">
                         <tr>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Address</th>
-                            <th class="px-3 py-2 text-left font-medium text-gray-500">Group</th>
-                            <th class="px-3 py-2 text-right font-medium text-gray-500">Status</th>
-                            <th class="px-3 py-2 text-right font-medium text-gray-500">Latency</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 dark:text-slate-400">Address</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 dark:text-slate-400">Protocol</th>
+                            <th class="px-3 py-2 text-left font-medium text-slate-500 dark:text-slate-400">Group</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 dark:text-slate-400">Status</th>
+                            <th class="px-3 py-2 text-right font-medium text-slate-500 dark:text-slate-400">Latency</th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="bg-white dark:bg-slate-900 divide-y divide-slate-200 dark:divide-slate-700">
                         <tr v-for="(res, i) in modal.testResults" :key="i">
-                            <td class="px-3 py-2 truncate max-w-[150px]" :title="res.address">{{ res.address }}</td>
-                            <td class="px-3 py-2">{{ res.group }}</td>
+                            <td class="px-3 py-2 truncate max-w-[200px] text-slate-800 dark:text-slate-200" :title="res.address">{{ res.address }}</td>
+                             <td class="px-3 py-2 text-slate-800 dark:text-slate-200"><span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs font-mono">{{ res.protocol }}</span></td>
+                            <td class="px-3 py-2 text-slate-800 dark:text-slate-200">{{ res.group }}</td>
                             <td class="px-3 py-2 text-right" :class="getTestStatusClass(res.status)">
                                 {{ res.status }}
                                 <i v-if="res.status === 'Error' || res.status === 'Fail'" class="fa-solid fa-circle-exclamation ml-1 text-xs" :title="res.error"></i>
                             </td>
-                            <td class="px-3 py-2 text-right font-mono">{{ res.latency }}</td>
+                            <td class="px-3 py-2 text-right font-mono text-slate-800 dark:text-slate-200">{{ res.latency }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -486,22 +739,22 @@
             <div v-if="modal.type === 'login'" class="space-y-4">
                 <form @submit.prevent="doLogin">
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('username') }}</label>
-                        <input type="text" v-model="loginForm.username" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ t('username') }}</label>
+                        <input type="text" v-model="loginForm.username" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 dark:text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" required>
                     </div>
                     <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">{{ t('password') }}</label>
-                        <input type="password" v-model="loginForm.password" class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" required>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ t('password') }}</label>
+                        <input type="password" v-model="loginForm.password" class="w-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 dark:text-white rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all" required>
                     </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700 transition-colors">{{ t('login') }}</button>
+                    <button type="submit" class="btn-glass btn-glass-primary w-full p-2 rounded-lg shadow-lg transition-colors">{{ t('login') }}</button>
                 </form>
             </div>
 
             <template #footer>
-                <button v-if="modal.type === 'saved'" @click="reloadPage" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                <button v-if="modal.type === 'saved'" @click="reloadPage" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
                     {{ t('ok') }}
                 </button>
-                <button v-if="modal.type !== 'saved' && modal.type !== 'saving' && modal.type !== 'testing' && modal.type !== 'login'" @click="modal.show = false" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button v-if="modal.type !== 'saved' && modal.type !== 'saving' && modal.type !== 'testing' && modal.type !== 'login'" @click="modal.show = false" type="button" class="w-full inline-flex justify-center rounded-md border border-slate-300 dark:border-slate-700 shadow-sm px-4 py-2 bg-white dark:bg-slate-800 text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
                     {{ t('ok') }}
                 </button>
             </template>
@@ -544,7 +797,7 @@ const i18nData = {
         setting_listen: "服务监听端口 (仅需填写端口号)",
         setting_bootstrap: "Bootstrap DNS (引导)",
         setting_upstreams: "上游 DNS 服务器",
-        setting_log_limit: "日志保留条数 (内存/持久化)",
+        setting_log_size: "日志文件最大大小 (MB)",
         setting_save_file: "开启持久化存储 (保存到文件)",
         setting_log_path: "日志文件路径",
         tab_cn: "国内分组 (CN)",
@@ -565,9 +818,9 @@ const i18nData = {
         status: "状态",
         dns_udp: "DNS UDP",
         dns_tcp: "DNS TCP",
-        doh_https: "DoH (HTTPS)",
-        dot_tls: "DoT (TLS)",
-        doq_quic: "DoQ (QUIC)",
+        doh_https: "DoH",
+        dot_tls: "DoT",
+        doq_quic: "DoQ",
         table_server: "服务器",
         table_group: "分组",
         table_queries: "查询数",
@@ -579,7 +832,12 @@ const i18nData = {
         username: "用户名",
         password: "密码",
         login_title: "管理员登录",
-        login_fail: "登录失败，请检查用户名和密码"
+        login_fail: "登录失败，请检查用户名和密码",
+        theme_light: "浅色模式",
+        theme_dark: "深色模式",
+        sort: "调整排序",
+        sort_done: "完成排序",
+        not_listening: "未监听"
     },
     en: {
         menu_dashboard: "Dashboard",
@@ -614,7 +872,7 @@ const i18nData = {
         setting_listen: "Listening Ports (Port only)",
         setting_bootstrap: "Bootstrap DNS",
         setting_upstreams: "Upstream Servers",
-        setting_log_limit: "Log Retention Limit",
+        setting_log_size: "Log File Max Size (MB)",
         setting_save_file: "Save to File (Persistent)",
         setting_log_path: "Log File Path",
         tab_cn: "Domestic (CN)",
@@ -635,9 +893,9 @@ const i18nData = {
         status: "Status",
         dns_udp: "DNS UDP",
         dns_tcp: "DNS TCP",
-        doh_https: "DoH (HTTPS)",
-        dot_tls: "DoT (TLS)",
-        doq_quic: "DoQ (QUIC)",
+        doh_https: "DoH",
+        dot_tls: "DoT",
+        doq_quic: "DoQ",
         table_server: "Server",
         table_group: "Group",
         table_queries: "Queries",
@@ -649,7 +907,12 @@ const i18nData = {
         username: "Username",
         password: "Password",
         login_title: "Admin Login",
-        login_fail: "Login failed, check credentials"
+        login_fail: "Login failed, check credentials",
+        theme_light: "Light Mode",
+        theme_dark: "Dark Mode",
+        sort: "Sort Order",
+        sort_done: "Done Sorting",
+        not_listening: "Not listening"
     }
 };
 
@@ -658,12 +921,12 @@ const FormInput = {
     emits: ['update:modelValue'],
     template: `
     <div class="w-full">
-        <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ label }}</label>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{{ label }}</label>
         <input :type="type || 'text'" 
             :value="modelValue" 
             :disabled="disabled"
             @input="$emit('update:modelValue', $event.target.value)"
-            class="shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-lg p-2.5 border transition-all disabled:bg-gray-100 disabled:text-gray-500"
+            class="shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-slate-300 dark:border-slate-700 rounded-lg p-2.5 border transition-all bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500"
             :placeholder="placeholder">
     </div>
     `
@@ -674,7 +937,7 @@ const ToggleSwitch = {
     emits: ['update:modelValue'],
     template: `
     <div class="flex items-center justify-between" :class="{'opacity-60': disabled}">
-        <span class="text-sm font-medium text-gray-700 mr-3">{{ label }}</span>
+        <span class="text-sm font-medium text-slate-700 dark:text-slate-300 mr-3">{{ label }}</span>
         <label class="flex items-center relative" :class="disabled ? 'cursor-not-allowed' : 'cursor-pointer'">
             <input type="checkbox" :checked="modelValue" :disabled="disabled" @change="$emit('update:modelValue', $event.target.checked)" class="toggle-input sr-only"/>
             <div class="toggle-track">
@@ -686,25 +949,25 @@ const ToggleSwitch = {
 };
 
 const Modal = {
-    props: ['show', 'title'],
+    props: ['show', 'title', 'maxWidth'],
     emits: ['close'],
     template: `
     <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="$emit('close')"></div>
+            <div class="fixed inset-0 bg-slate-900 bg-opacity-75 backdrop-blur-sm transition-opacity" aria-hidden="true" @click="$emit('close')"></div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle w-full border border-slate-200 dark:border-slate-800" :class="maxWidth || 'sm:max-w-lg'">
+                <div class="bg-white dark:bg-slate-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div class="sm:flex sm:items-start">
                         <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">{{ title }}</h3>
+                            <h3 class="text-lg leading-6 font-medium text-slate-900 dark:text-white" id="modal-title">{{ title }}</h3>
                             <div class="mt-4">
                                 <slot></slot>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <div class="bg-slate-50 dark:bg-slate-950/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <slot name="footer"></slot>
                 </div>
             </div>
@@ -723,7 +986,11 @@ const app = Vue.createApp({
         return {
             lang: 'zh',
             currentView: 'dashboard',
+            isDark: false,
+            sidebarOpen: false,
             upstreamTab: 'cn',
+            isSorting: false,
+            draggedIndex: null,
             config: {
                 listen: {},
                 bootstrap_dns: [],
@@ -739,6 +1006,8 @@ const app = Vue.createApp({
                 top_domains: {}
             },
             logs: [],
+            logsPage: 1,
+            logsTotal: 0,
             logsFilter: "",
             sortKey: "",
             sortOrder: 1,
@@ -753,6 +1022,7 @@ const app = Vue.createApp({
                 show: false,
                 type: '', 
                 title: '',
+                maxWidth: '',
                 testResults: []
             }
         }
@@ -787,9 +1057,20 @@ const app = Vue.createApp({
             });
         }
     },
+    watch: {
+        currentView(newVal) {
+            localStorage.setItem('doh_current_view', newVal);
+        },
+        isDark(newVal) {
+            localStorage.setItem('doh_theme', newVal ? 'dark' : 'light');
+            if(newVal) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+        }
+    },
     methods: {
         t(key) { return i18nData[this.lang][key] || key; },
         toggleLang() { this.lang = this.lang === 'zh' ? 'en' : 'zh'; },
+        toggleTheme() { this.isDark = !this.isDark; },
         formatTime(ts) { 
              const d = new Date(ts);
              return d.toLocaleTimeString('zh-CN', { hour12: false }) + "." + d.getMilliseconds().toString().padStart(3, '0');
@@ -806,26 +1087,35 @@ const app = Vue.createApp({
             s += m + "m";
             return s;
         },
+        formatListenPort(portValue) {
+            return portValue && portValue.startsWith(':') ? portValue.substring(1) : portValue;
+        },
+        getStartTime(uptime) {
+            if (!uptime) return '-';
+            const now = new Date();
+            const start = new Date(now.getTime() - uptime * 1000);
+            return start.toLocaleString(this.lang === 'zh' ? 'zh-CN' : 'en-US', { hour12: false });
+        },
         getPercentage(part, total) {
             if (!total) return 0;
             return ((part / total) * 100).toFixed(1);
         },
         getUpstreamClass(u) {
             if(!u) return "bg-gray-100 text-gray-800";
-            if(u.includes("CN") || u.includes("Domestic")) return "bg-green-100 text-green-800";
-            if(u.includes("Overseas")) return "bg-blue-100 text-blue-800";
-            if(u.includes("Hosts")) return "bg-purple-100 text-purple-800";
-            if(u.includes("Fail")) return "bg-red-100 text-red-800";
-            return "bg-gray-100 text-gray-800";
+            if(u.includes("CN") || u.includes("Domestic")) return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
+            if(u.includes("Overseas")) return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
+            if(u.includes("Hosts")) return "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300";
+            if(u.includes("Fail")) return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+            return "bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-slate-300";
         },
         getLatencyClass(ms) {
             if(!ms && ms !== 0) return "";
-            if(ms < 50) return "text-green-600";
-            if(ms < 200) return "text-yellow-600";
-            return "text-red-600";
+            if(ms < 50) return "text-green-600 dark:text-green-400";
+            if(ms < 200) return "text-yellow-600 dark:text-yellow-400";
+            return "text-red-600 dark:text-red-400";
         },
         getTestStatusClass(status) {
-            return status === 'OK' ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+            return status === 'OK' ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold';
         },
         sortBy(key) {
             if (this.sortKey === key) {
@@ -836,7 +1126,7 @@ const app = Vue.createApp({
             }
         },
         getSortIcon(key) {
-            if (this.sortKey !== key) return "fa-sort text-gray-300";
+            if (this.sortKey !== key) return "fa-sort text-slate-300 dark:text-slate-600";
             return this.sortOrder === 1 ? "fa-sort-up active" : "fa-sort-down active";
         },
         showPipeline(p) { return p === 'tcp' || p === 'dot'; },
@@ -852,7 +1142,7 @@ const app = Vue.createApp({
         },
         openLogin() {
             this.loginForm = { username: '', password: '' };
-            this.modal = { show: true, type: 'login', title: this.t('login_title') };
+            this.modal = { show: true, type: 'login', title: this.t('login_title'), maxWidth: 'sm:max-w-sm' };
         },
         async doLogin() {
             try {
@@ -887,6 +1177,11 @@ const app = Vue.createApp({
                 if(!this.config.upstreams.overseas) this.config.upstreams.overseas = [];
                 if(!this.config.query_log) this.config.query_log = { enabled: true, max_history: 5000, save_to_file: false, file: "" };
                 
+                let idCounter = 0;
+                const addId = (s) => { if(!s._id) s._id = Date.now() + (idCounter++); return s; };
+                this.config.upstreams.cn.forEach(addId);
+                this.config.upstreams.overseas.forEach(addId);
+
                 const strip = (p) => p ? p.toString().replace(':', '') : '';
                 if(this.config.listen) {
                     this.config.listen.dns_udp = strip(this.config.listen.dns_udp);
@@ -902,12 +1197,16 @@ const app = Vue.createApp({
         async saveConfig() {
             if (!this.canEdit) return;
             this.loading = true;
-            this.modal = { show: true, type: 'saving', title: this.t('saving_title') };
+            this.modal = { show: true, type: 'saving', title: this.t('saving_title'), maxWidth: 'sm:max-w-sm' };
             try {
+                const cleanConfig = JSON.parse(JSON.stringify(this.config));
+                if(cleanConfig.upstreams.cn) cleanConfig.upstreams.cn.forEach(s => delete s._id);
+                if(cleanConfig.upstreams.overseas) cleanConfig.upstreams.overseas.forEach(s => delete s._id);
+
                 const res = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(this.config)
+                    body: JSON.stringify(cleanConfig)
                 });
                 if(!res.ok) {
                     if(res.status === 401) {
@@ -917,7 +1216,7 @@ const app = Vue.createApp({
                     }
                     throw new Error(await res.text());
                 }
-                this.modal = { show: true, type: 'saved', title: this.t('saved_title') };
+                this.modal = { show: true, type: 'saved', title: this.t('saved_title'), maxWidth: 'sm:max-w-sm' };
             } catch(e) {
                 this.modal.show = false;
                 alert("Error: " + e.message);
@@ -930,7 +1229,7 @@ const app = Vue.createApp({
         },
         async testUpstreams() {
             if (!this.canEdit) return;
-            this.modal = { show: true, type: 'testing', title: this.t('testing') };
+            this.modal = { show: true, type: 'testing', title: this.t('testing'), maxWidth: 'sm:max-w-sm' };
             try {
                 const res = await fetch('/api/test-upstreams', {
                     method: 'POST',
@@ -946,18 +1245,22 @@ const app = Vue.createApp({
                     throw new Error(await res.text());
                 }
                 const results = await res.json();
-                this.modal = { show: true, type: 'test', title: this.t('test_results'), testResults: results };
+                this.modal = { show: true, type: 'test', title: this.t('test_results'), testResults: results, maxWidth: 'sm:max-w-5xl' };
             } catch(e) {
                 this.modal.show = false;
                 alert("Test Error: " + e.message);
             }
         },
-        async fetchLogs() {
+        async fetchLogs(page = 1) {
             try {
-                let url = '/api/logs?limit=100';
+                this.logsPage = page;
+                let url = `/api/logs?page=${page}&limit=20`;
                 if(this.logsFilter) url += '&q=' + encodeURIComponent(this.logsFilter);
+                
                 const res = await fetch(url);
-                this.logs = await res.json();
+                const data = await res.json();
+                this.logs = data.data || [];
+                this.logsTotal = data.total || 0;
             } catch(e) { console.error(e); }
         },
         async fetchStats() {
@@ -969,7 +1272,7 @@ const app = Vue.createApp({
         addBootstrap() { this.config.bootstrap_dns.push(""); },
         removeBootstrap(idx) { this.config.bootstrap_dns.splice(idx, 1); },
         addUpstream(type) {
-            const empty = { address: "", protocol: "udp", ecs_ip: "", pipeline: false, http3: false, insecure_skip_verify: false };
+            const empty = { address: "", protocol: "udp", ecs_ip: "", pipeline: false, http3: false, insecure_skip_verify: false, _id: Date.now() };
             if(type === 'cn') this.config.upstreams.cn.push(empty);
             else this.config.upstreams.overseas.push(empty);
         },
@@ -978,15 +1281,47 @@ const app = Vue.createApp({
                 if(type === 'cn') this.config.upstreams.cn.splice(idx, 1);
                 else this.config.upstreams.overseas.splice(idx, 1);
             }
+        },
+        toggleSort() {
+            this.isSorting = !this.isSorting;
+        },
+        onDragStart(index, event) {
+            this.draggedIndex = index;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.dropEffect = 'move';
+        },
+        onDragEnter(index) {
+            if (this.draggedIndex === null || this.draggedIndex === index) return;
+
+            const list = this.currentUpstreams;
+            const draggedItem = list[this.draggedIndex];
+
+            list.splice(this.draggedIndex, 1);
+            list.splice(index, 0, draggedItem);
+
+            this.draggedIndex = index;
+        },
+        onDragEnd() {
+            this.draggedIndex = null;
         }
     },
     mounted() {
+        const savedView = localStorage.getItem('doh_current_view');
+        if(savedView) this.currentView = savedView;
+        
+        const savedTheme = localStorage.getItem('doh_theme');
+        if(savedTheme === 'dark') {
+            this.isDark = true;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && !savedTheme) {
+             this.isDark = true;
+        }
+
         this.checkAuth();
         this.loadConfig();
         this.fetchStats();
         this.statsTimer = setInterval(this.fetchStats, 3000);
         this.logsTimer = setInterval(() => {
-            if(this.currentView === 'logs') this.fetchLogs();
+            if(this.currentView === 'logs') this.fetchLogs(this.logsPage);
         }, 3000);
     },
     unmounted() {
@@ -997,3 +1332,5 @@ const app = Vue.createApp({
 
 app.mount('#app');
 </script>
+</body>
+</html>

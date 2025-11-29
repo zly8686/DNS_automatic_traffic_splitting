@@ -17,8 +17,8 @@ import (
 type DoTClient struct {
 	cfg          config.UpstreamServer
 	bootstrapper *resolver.Bootstrapper
-	conn         *dns.Conn
-	lock         sync.Mutex
+	pool         chan *dns.Conn
+	poolInit     sync.Once
 }
 
 func NewDoTClient(cfg config.UpstreamServer, b *resolver.Bootstrapper) *DoTClient {
@@ -56,38 +56,64 @@ func (c *DoTClient) resolveOneshot(ctx context.Context, req *dns.Msg) (*dns.Msg,
 	return resp, nil
 }
 
-func (c *DoTClient) resolvePipeline(ctx context.Context, req *dns.Msg) (*dns.Msg, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+func (c *DoTClient) initPool() {
+	c.poolInit.Do(func() {
+		c.pool = make(chan *dns.Conn, 10)
+		for i := 0; i < 10; i++ {
+			c.pool <- nil
+		}
+	})
+}
 
-	if c.conn == nil {
-		if err := c.dial(ctx); err != nil {
+func (c *DoTClient) resolvePipeline(ctx context.Context, req *dns.Msg) (*dns.Msg, error) {
+	c.initPool()
+
+	var conn *dns.Conn
+	select {
+	case conn = <-c.pool:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+
+	defer func() {
+		c.pool <- conn
+	}()
+
+	var err error
+	if conn == nil {
+		conn, err = c.dialConn(ctx)
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	if err := c.conn.WriteMsg(req); err != nil {
-		c.conn.Close()
-		c.conn = nil
-		if err := c.dial(ctx); err != nil {
+	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	if err := conn.WriteMsg(req); err != nil {
+		conn.Close()
+		conn = nil
+		conn, err = c.dialConn(ctx)
+		if err != nil {
 			return nil, fmt.Errorf("重连失败: %w", err)
 		}
-		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		if err := c.conn.WriteMsg(req); err != nil {
+		conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		if err := conn.WriteMsg(req); err != nil {
+			conn.Close()
+			conn = nil
 			return nil, fmt.Errorf("写入失败: %w", err)
 		}
 	}
 
-	c.conn.SetReadDeadline(time.Now().Add(5 * time.Second))
-	resp, err := c.conn.ReadMsg()
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	resp, err := conn.ReadMsg()
 	if err != nil {
-		c.conn.Close()
-		c.conn = nil
+		conn.Close()
+		conn = nil
 		return nil, fmt.Errorf("读取失败: %w", err)
 	}
 
 	if resp.Id != req.Id {
+		conn.Close()
+		conn = nil
 		return nil, fmt.Errorf("ID mismatch")
 	}
 
@@ -123,10 +149,10 @@ func (c *DoTClient) prepare(ctx context.Context) (string, *tls.Config, error) {
 	return addr, tlsConfig, nil
 }
 
-func (c *DoTClient) dial(ctx context.Context) error {
+func (c *DoTClient) dialConn(ctx context.Context) (*dns.Conn, error) {
 	addr, tlsConfig, err := c.prepare(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	cli := &dns.Client{
@@ -136,8 +162,7 @@ func (c *DoTClient) dial(ctx context.Context) error {
 	}
 	conn, err := cli.Dial(addr)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	c.conn = conn
-	return nil
+	return conn, nil
 }
