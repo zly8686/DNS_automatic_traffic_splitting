@@ -84,13 +84,19 @@ func StartWebServer(mgr *manager.ServiceManager) {
 	}
 
 	mux.HandleFunc("/api/auth/status", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		w.Header().Set("Pragma", "no-cache")
+		w.Header().Set("Expires", "0")
+
 		enabled := mgr.Config.WebUI.Username != "" && mgr.Config.WebUI.Password != ""
 		authenticated := checkAuth(r)
+		guestMode := mgr.Config.WebUI.GuestMode
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"enabled":       enabled,
 			"authenticated": authenticated,
+			"guest_mode":    guestMode,
 		})
 	})
 
@@ -120,7 +126,9 @@ func StartWebServer(mgr *manager.ServiceManager) {
 				Name:     "session_token",
 				Value:    token,
 				Expires:  expiry,
+				MaxAge:   86400,
 				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
 				Path:     "/",
 			})
 			w.WriteHeader(http.StatusOK)
@@ -139,7 +147,9 @@ func StartWebServer(mgr *manager.ServiceManager) {
 			Name:     "session_token",
 			Value:    "",
 			Expires:  time.Now().Add(-1 * time.Hour),
+			MaxAge:   -1,
 			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
 			Path:     "/",
 		})
 		w.WriteHeader(http.StatusOK)
@@ -149,6 +159,10 @@ func StartWebServer(mgr *manager.ServiceManager) {
 		currentCfg := mgr.Config
 
 		if r.Method == http.MethodGet {
+			if !mgr.Config.WebUI.GuestMode && !checkAuth(r) {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(currentCfg)
 			return
@@ -265,7 +279,12 @@ func StartWebServer(mgr *manager.ServiceManager) {
 			return
 		}
 
-		limit := 20
+		if !mgr.Config.WebUI.GuestMode && !checkAuth(r) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		limit := 15
 		page := 1
 
 		if p := r.URL.Query().Get("page"); p != "" {
@@ -295,6 +314,11 @@ func StartWebServer(mgr *manager.ServiceManager) {
 	mux.HandleFunc("/api/stats", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if !mgr.Config.WebUI.GuestMode && !checkAuth(r) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 

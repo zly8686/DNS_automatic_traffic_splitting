@@ -14,8 +14,8 @@ type Config struct {
 	Listen          ListenConfig      `yaml:"listen" json:"listen"`
 	BootstrapDNS    []string          `yaml:"bootstrap_dns" json:"bootstrap_dns"`
 	Upstreams       UpstreamsConfig   `yaml:"upstreams" json:"upstreams"`
-	Hosts           map[string]string `yaml:"-" json:"-"`
-	Rules           map[string]string `yaml:"-" json:"-"`
+	Hosts           map[string]string `yaml:"-" json:"hosts"`
+	Rules           map[string]string `yaml:"-" json:"rules"`
 	GeoData         GeoDataConfig     `yaml:"geo_data" json:"geo_data"`
 	AutoCert        AutoCertConfig    `yaml:"auto_cert" json:"auto_cert"`
 	TLSCertificates []TLSCertConfig   `yaml:"tls_certificates" json:"tls_certificates"`
@@ -36,12 +36,13 @@ type QueryLogConfig struct {
 }
 
 type WebUIConfig struct {
-	Enabled  bool   `yaml:"enabled" json:"enabled"`
-	Address  string `yaml:"address" json:"address"`
-	Username string `yaml:"username" json:"username"`
-	Password string `yaml:"password" json:"password"`
-	CertFile string `yaml:"cert_file" json:"cert_file"`
-	KeyFile  string `yaml:"key_file" json:"key_file"`
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	Address   string `yaml:"address" json:"address"`
+	Username  string `yaml:"username" json:"username"`
+	Password  string `yaml:"password" json:"password"`
+	CertFile  string `yaml:"cert_file" json:"cert_file"`
+	KeyFile   string `yaml:"key_file" json:"key_file"`
+	GuestMode bool   `yaml:"guest_mode" json:"guest_mode"`
 }
 
 type AutoCertConfig struct {
@@ -79,6 +80,7 @@ type GeoDataConfig struct {
 	GeoSiteDat         string `yaml:"geosite_dat" json:"geosite_dat"`
 	GeoIPDownloadURL   string `yaml:"geoip_download_url" json:"geoip_download_url"`
 	GeoSiteDownloadURL string `yaml:"geosite_download_url" json:"geosite_download_url"`
+	AutoUpdate         string `yaml:"auto_update" json:"auto_update"` // Format: "15:04" (HH:MM)
 }
 
 func LoadConfig(configPath string) (*Config, error) {
@@ -143,7 +145,48 @@ func (c *Config) Save(configPath string) error {
 	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("无法写入配置文件 %s: %w", configPath, err)
 	}
+
+	if err := saveHostsFile("hosts.txt", c.Hosts); err != nil {
+		return fmt.Errorf("无法写入 hosts.txt: %w", err)
+	}
+
+	if err := saveRulesFile("rule.txt", c.Rules); err != nil {
+		return fmt.Errorf("无法写入 rule.txt: %w", err)
+	}
+
 	return nil
+}
+
+func saveHostsFile(path string, hosts map[string]string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	for domain, ip := range hosts {
+		if _, err := fmt.Fprintf(w, "%s %s\n", ip, domain); err != nil {
+			return err
+		}
+	}
+	return w.Flush()
+}
+
+func saveRulesFile(path string, rules map[string]string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	for domain, target := range rules {
+		if _, err := fmt.Fprintf(w, "%s %s\n", domain, target); err != nil {
+			return err
+		}
+	}
+	return w.Flush()
 }
 
 func loadHostsFile(path string, hosts map[string]string) error {

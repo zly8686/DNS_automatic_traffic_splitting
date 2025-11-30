@@ -11,22 +11,30 @@ import (
 )
 
 type LogEntry struct {
-	ID         int64     `json:"id"`
-	Time       time.Time `json:"time"`
-	ClientIP   string    `json:"client_ip"`
-	Domain     string    `json:"domain"`
-	Type       string    `json:"type"`
-	Upstream   string    `json:"upstream"`
-	Answer     string    `json:"answer"`
-	DurationMs int64     `json:"duration_ms"`
-	Status     string    `json:"status"`
+	ID            int64          `json:"id"`
+	Time          time.Time      `json:"time"`
+	ClientIP      string         `json:"client_ip"`
+	Domain        string         `json:"domain"`
+	Type          string         `json:"type"`
+	Upstream      string         `json:"upstream"`
+	Answer        string         `json:"answer"`
+	AnswerRecords []AnswerRecord `json:"answer_records"`
+	DurationMs    int64          `json:"duration_ms"`
+	Status        string         `json:"status"`
+}
+
+type AnswerRecord struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Data string `json:"data"`
+	TTL  uint32 `json:"ttl"`
 }
 
 type Stats struct {
+	StartTime     time.Time        `json:"start_time"`
 	TotalQueries  int64            `json:"total_queries"`
 	TotalCN       int64            `json:"total_cn"`
 	TotalOverseas int64            `json:"total_overseas"`
-	StartTime     time.Time        `json:"start_time"`
 	TopClients    map[string]int64 `json:"top_clients"`
 	TopDomains    map[string]int64 `json:"top_domains"`
 }
@@ -61,17 +69,17 @@ func NewQueryLogger(maxSizeMB int, filePath string, saveToFile bool) *QueryLogge
 	}
 
 	if saveToFile && filePath != "" {
-		l.loadFromFile()
+		l.restoreStatsFromFile()
 	}
 
 	return l
 }
 
-func (l *QueryLogger) loadFromFile() {
+func (l *QueryLogger) restoreStatsFromFile() {
 	f, err := os.Open(l.filePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			log.Printf("Error opening log file: %v", err)
+			log.Printf("Error opening log file for stats restoration: %v", err)
 		}
 		return
 	}
@@ -82,7 +90,6 @@ func (l *QueryLogger) loadFromFile() {
 		var entry LogEntry
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err == nil {
 			l.updateStats(&entry)
-			l.addToMemory(&entry)
 			if entry.ID >= l.nextID {
 				l.nextID = entry.ID + 1
 			}
@@ -154,6 +161,12 @@ func (l *QueryLogger) appendToFile(entry LogEntry) {
 func (l *QueryLogger) GetLogs(offset, limit int, search string) ([]*LogEntry, int64) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
+	if l.saveToFile && l.filePath != "" {
+		fileLogs, total, err := l.readLogsFromFileBackwards(offset, limit, search)
+		if err == nil {
+			return fileLogs, total
+		}
+	}
 
 	var result []*LogEntry
 	var count int64 = 0
@@ -181,6 +194,102 @@ func (l *QueryLogger) GetLogs(offset, limit int, search string) ([]*LogEntry, in
 	}
 
 	return result, count
+}
+
+func (l *QueryLogger) readLogsFromFileBackwards(offset, limit int, search string) ([]*LogEntry, int64, error) {
+	file, err := os.Open(l.filePath)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	fileSize := stat.Size()
+	var result []*LogEntry
+	var matchCount int64 = 0
+
+	buf := make([]byte, 4096)
+	pos := fileSize
+	var line []byte
+
+	searchLower := strings.ToLower(search)
+
+	for pos > 0 {
+		readSize := int64(len(buf))
+		if pos < readSize {
+			readSize = pos
+		}
+		pos -= readSize
+		_, err := file.Seek(pos, 0)
+		if err != nil {
+			break
+		}
+
+		n, err := file.Read(buf[:readSize])
+		if err != nil {
+			break
+		}
+
+		for i := n - 1; i >= 0; i-- {
+			b := buf[i]
+			if b == '\n' {
+				if len(line) > 0 {
+					entry := parseReverseLine(line)
+					if entry != nil && matches(entry, searchLower) {
+						if matchCount >= int64(offset) && len(result) < limit {
+							result = append(result, entry)
+						}
+						matchCount++
+					}
+					line = line[:0]
+				}
+			} else {
+				line = append(line, b)
+			}
+		}
+	}
+
+	if len(line) > 0 {
+		entry := parseReverseLine(line)
+		if entry != nil && matches(entry, searchLower) {
+			if matchCount >= int64(offset) && len(result) < limit {
+				result = append(result, entry)
+			}
+			matchCount++
+		}
+	}
+
+	return result, matchCount, nil
+}
+
+func parseReverseLine(reversed []byte) *LogEntry {
+	n := len(reversed)
+	normal := make([]byte, n)
+	for i := 0; i < n; i++ {
+		normal[i] = reversed[n-1-i]
+	}
+
+	var entry LogEntry
+	if err := json.Unmarshal(normal, &entry); err != nil {
+		return nil
+	}
+	return &entry
+}
+
+func matches(entry *LogEntry, searchLower string) bool {
+	if searchLower == "" {
+		return true
+	}
+	return strings.Contains(strings.ToLower(entry.ClientIP), searchLower) ||
+		strings.Contains(strings.ToLower(entry.Domain), searchLower) ||
+		strings.Contains(strings.ToLower(entry.Type), searchLower) ||
+		strings.Contains(strings.ToLower(entry.Upstream), searchLower) ||
+		strings.Contains(strings.ToLower(entry.Answer), searchLower) ||
+		strings.Contains(strings.ToLower(entry.Status), searchLower)
 }
 
 func (l *QueryLogger) GetStats() Stats {

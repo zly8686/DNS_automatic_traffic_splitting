@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,6 +17,11 @@ import (
 	"github.com/miekg/dns"
 )
 
+type RegexRule struct {
+	Pattern *regexp.Regexp
+	Target  string
+}
+
 type Router struct {
 	config          *config.Config
 	geo             *GeoDataManager
@@ -25,6 +31,8 @@ type Router struct {
 
 	cnStats       []*client.StatsClient
 	overseasStats []*client.StatsClient
+
+	regexRules []RegexRule
 }
 
 func NewRouter(cfg *config.Config, geoManager *GeoDataManager, logger *querylog.QueryLogger) *Router {
@@ -32,6 +40,21 @@ func NewRouter(cfg *config.Config, geoManager *GeoDataManager, logger *querylog.
 		config: cfg,
 		geo:    geoManager,
 		logger: logger,
+	}
+
+	for domain, target := range cfg.Rules {
+		if strings.HasPrefix(domain, "regexp:") {
+			pattern := strings.TrimPrefix(domain, "regexp:")
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				log.Printf("忽略无效的正则规则: %s -> %v", domain, err)
+				continue
+			}
+			r.regexRules = append(r.regexRules, RegexRule{
+				Pattern: re,
+				Target:  target,
+			})
+		}
 	}
 
 	bootstrapper := resolver.NewBootstrapper(cfg.BootstrapDNS)
@@ -87,6 +110,7 @@ func (r *Router) Route(ctx context.Context, req *dns.Msg, clientIP string) (*dns
 
 	status := "ERROR"
 	answer := ""
+	var answerRecords []querylog.AnswerRecord
 
 	if err == nil && resp != nil {
 		status = dns.RcodeToString[resp.Rcode]
@@ -100,18 +124,35 @@ func (r *Router) Route(ctx context.Context, req *dns.Msg, clientIP string) (*dns
 			if len(resp.Answer) > 1 {
 				answer += fmt.Sprintf(" (+%d more)", len(resp.Answer)-1)
 			}
+
+			for _, ans := range resp.Answer {
+				parts := strings.Fields(ans.String())
+				data := ""
+				if len(parts) > 4 {
+					data = strings.Join(parts[4:], " ")
+				} else {
+					data = ans.String()
+				}
+				answerRecords = append(answerRecords, querylog.AnswerRecord{
+					Name: ans.Header().Name,
+					Type: dns.Type(ans.Header().Rrtype).String(),
+					TTL:  ans.Header().Ttl,
+					Data: data,
+				})
+			}
 		}
 	}
 
 	if r.logger != nil {
 		r.logger.AddLog(&querylog.LogEntry{
-			ClientIP:   clientIP,
-			Domain:     qName,
-			Type:       qType,
-			Upstream:   upstream,
-			Answer:     answer,
-			DurationMs: duration,
-			Status:     status,
+			ClientIP:      clientIP,
+			Domain:        qName,
+			Type:          qType,
+			Upstream:      upstream,
+			Answer:        answer,
+			AnswerRecords: answerRecords,
+			DurationMs:    duration,
+			Status:        status,
 		})
 	}
 
@@ -153,7 +194,19 @@ func (r *Router) routeInternal(ctx context.Context, req *dns.Msg) (*dns.Msg, str
 			resp, err := client.RaceResolve(ctx, req, r.overseasClients)
 			return resp, "Rule(Overseas)", err
 		default:
-			return nil, "Rule(Unknown)", fmt.Errorf("自定义规则中存在未知路由目标: %s for %s", rule, qName)
+		}
+	}
+
+	for _, rr := range r.regexRules {
+		if rr.Pattern.MatchString(qName) {
+			switch strings.ToLower(rr.Target) {
+			case "cn":
+				resp, err := client.RaceResolve(ctx, req, r.cnClients)
+				return resp, "Rule(Regex/CN)", err
+			case "overseas":
+				resp, err := client.RaceResolve(ctx, req, r.overseasClients)
+				return resp, "Rule(Regex/Overseas)", err
+			}
 		}
 	}
 

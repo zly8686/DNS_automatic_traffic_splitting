@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"log"
 	"sync"
 	"time"
 
@@ -47,7 +46,6 @@ func (s *StatsClient) Resolve(ctx context.Context, req *dns.Msg) (*dns.Msg, erro
 			s.TotalCanceled++
 		} else {
 			s.TotalErrors++
-			log.Printf("[%s] Error after %dms: %v", s.Address, duration/1000, err)
 		}
 	} else {
 	}

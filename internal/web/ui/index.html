@@ -196,50 +196,78 @@
 
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.5s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .animate-spin-reverse { animation: spin-reverse 1s linear infinite; }
+        @keyframes spin-reverse { from { transform: rotate(360deg); } to { transform: rotate(0deg); } }
     </style>
 </head>
 <body class="antialiased">
 <div id="app" class="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300">
-    <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm md:hidden transition-opacity"></div>
-
-    <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'" class="fixed inset-y-0 left-0 z-40 w-64 glass-sidebar flex flex-col flex-shrink-0 shadow-2xl transition-transform duration-300 ease-in-out">
-        <div class="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
-            <div class="text-blue-600 dark:text-sky-400 text-2xl mr-2"><i class="fa-solid fa-shield-halved"></i></div>
-            <h1 class="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100">AutoProxy</h1>
-        </div>
-        
-        <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
-            <a href="#" @click.prevent="currentView = 'dashboard'; sidebarOpen = false" :class="{'active': currentView === 'dashboard'}" class="sidebar-link">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>{{ t('menu_dashboard') }}</span>
-            </a>
-            <a href="#" @click.prevent="currentView = 'logs'; sidebarOpen = false" :class="{'active': currentView === 'logs'}" class="sidebar-link">
-                <i class="fa-solid fa-list-check"></i>
-                <span>{{ t('menu_logs') }}</span>
-            </a>
-            <a href="#" @click.prevent="currentView = 'settings'; sidebarOpen = false" :class="{'active': currentView === 'settings'}" class="sidebar-link">
-                <i class="fa-solid fa-sliders"></i>
-                <span>{{ t('menu_settings') }}</span>
-            </a>
-        </nav>
-
-        <div class="p-4 border-t border-slate-200 dark:border-slate-800">
-            <div class="flex items-center justify-between mb-3">
-                <a href="https://github.com/Hamster-Prime/DNS_automatic_traffic_splitting" target="_blank" class="text-xs text-slate-500 dark:text-slate-400 font-mono hover:text-blue-600 dark:hover:text-blue-400 transition-colors">latest</a>
-                <button @click="toggleLang" class="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 transition-colors uppercase tracking-wider">{{ lang }}</button>
+    <transition name="fade">
+        <div v-if="loadingState" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white dark:bg-slate-950">
+            <div class="relative flex items-center justify-center mb-8">
+                <div class="w-20 h-20 rounded-full border-4 border-slate-200 dark:border-slate-700"></div>
+                <div class="absolute w-20 h-20 rounded-full border-4 border-transparent border-t-blue-500 animate-spin"></div>
+                <i class="fa-solid fa-shield-halved text-2xl text-blue-500 absolute"></i>
             </div>
-            <button @click="toggleTheme" class="w-full py-2 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
-                <i class="fa-solid mr-2" :class="isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-slate-500'"></i>
-                <span>{{ isDark ? t('theme_light') : t('theme_dark') }}</span>
-            </button>
+            
+            <div class="flex flex-col items-center">
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">AutoProxy</h2>
+            </div>
         </div>
-    </aside>
+    </transition>
 
-    <div class="flex flex-col min-h-screen md:pl-64 transition-all duration-300">
+    <div v-if="!loadingState">
+        <div v-if="canView" class="min-h-screen bg-white dark:bg-slate-950 transition-colors duration-300 flex">
+    
+            <div v-if="sidebarOpen" @click="sidebarOpen = false" class="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm md:hidden transition-opacity"></div>
+
+            <aside :class="[
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+                desktopSidebarOpen ? 'md:translate-x-0' : 'md:-translate-x-full'
+            ]" class="fixed inset-y-0 left-0 z-40 w-64 glass-sidebar flex flex-col flex-shrink-0 shadow-2xl transition-transform duration-300 ease-in-out">
+                <div class="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800">
+                    <div class="text-blue-600 dark:text-sky-400 text-2xl mr-2"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h1 class="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100">AutoProxy</h1>
+                </div>
+                
+                <nav class="flex-1 py-6 space-y-1 overflow-y-auto">
+                    <a href="#" @click.prevent="currentView = 'dashboard'; sidebarOpen = false" :class="{'active': currentView === 'dashboard'}" class="sidebar-link">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>{{ t('menu_dashboard') }}</span>
+                    </a>
+                    <a href="#" @click.prevent="currentView = 'logs'; sidebarOpen = false" :class="{'active': currentView === 'logs'}" class="sidebar-link">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>{{ t('menu_logs') }}</span>
+                    </a>
+                    <a href="#" @click.prevent="currentView = 'settings'; sidebarOpen = false" :class="{'active': currentView === 'settings'}" class="sidebar-link">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>{{ t('menu_settings') }}</span>
+                    </a>
+                </nav>
+
+                <div class="p-4 border-t border-slate-200 dark:border-slate-800">
+                    <div class="flex items-center justify-between mb-3">
+                        <a href="https://github.com/Hamster-Prime/DNS_automatic_traffic_splitting" target="_blank" class="text-xs text-slate-500 dark:text-slate-400 font-mono hover:text-blue-600 dark:hover:text-blue-400 transition-colors">latest</a>
+                        <button @click="toggleLang" class="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-sky-400 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 transition-colors uppercase tracking-wider">{{ lang }}</button>
+                    </div>
+                    <button @click="toggleTheme" class="w-full py-2 px-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-sm flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <i class="fa-solid mr-2" :class="isDark ? 'fa-sun text-yellow-400' : 'fa-moon text-slate-500'"></i>
+                        <span>{{ isDark ? t('theme_light') : t('theme_dark') }}</span>
+                    </button>
+                </div>
+            </aside>
+
+            <div class="flex-1 flex flex-col min-h-screen transition-all duration-300" :class="desktopSidebarOpen ? 'md:pl-64' : 'md:pl-0'">
         <header class="glass-header h-16 flex items-center justify-between px-4 md:px-8 z-20 shadow-sm sticky top-0">
             <div class="flex items-center">
                 <button @click="sidebarOpen = !sidebarOpen" class="md:hidden mr-4 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none">
                     <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <button @click="desktopSidebarOpen = !desktopSidebarOpen" class="hidden md:block mr-4 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none transition-transform" :class="{'rotate-180': !desktopSidebarOpen}">
+                    <i class="fa-solid fa-outdent text-xl"></i>
                 </button>
                 <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">{{ t('menu_' + currentView) }}</h2>
             </div>
@@ -260,9 +288,10 @@
                     <i class="fa-solid fa-right-from-bracket mr-2 md:mr-0"></i> <span class="hidden md:inline ml-2">{{ t('logout') }}</span>
                 </button>
 
-                <button v-if="currentView === 'settings' && (!authEnabled || isLoggedIn)" @click="saveConfig" :disabled="loading" class="btn-glass btn-glass-primary px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center disabled:opacity-50">
+                <button v-if="(currentView === 'settings' || unsavedChanges) && (!authEnabled || isLoggedIn)" @click="saveConfig" :disabled="loading" class="btn-glass btn-glass-primary px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center disabled:opacity-50" :class="{'animate-pulse': unsavedChanges}">
                     <i class="fa-solid fa-save mr-2 md:mr-0"></i> <span class="hidden md:inline ml-2">{{ loading ? t('saving') : t('save_apply') }}</span>
                 </button>
+                <span v-if="unsavedChanges" class="text-xs font-bold text-amber-500 dark:text-amber-400 mr-2 hidden md:inline-block">{{ t('unsaved_changes') }}</span>
                 
                 <button v-if="currentView === 'logs'" @click="fetchLogs(1)" class="btn-glass btn-glass-secondary px-4 py-2 rounded-lg text-sm font-medium flex items-center">
                     <i class="fa-solid fa-rotate mr-2"></i> <span class="hidden md:inline">{{ t('refresh') }}</span>
@@ -495,9 +524,9 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-                            <tr v-for="log in sortedLogs" :key="log.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                            <tr v-for="log in sortedLogs" :key="log.id" class="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer" @click="showLogDetails(log)">
                                 <td class="px-4 py-2 whitespace-nowrap text-slate-500 dark:text-slate-400 font-mono text-xs">{{ formatTime(log.time) }}</td>
-                                <td class="px-4 py-2 whitespace-nowrap text-blue-600 dark:text-blue-400 cursor-pointer hover:underline font-medium" @click="logsFilter = log.client_ip; fetchLogs(1)">{{ log.client_ip }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap text-blue-600 dark:text-blue-400 font-medium" @click.stop="logsFilter = log.client_ip; fetchLogs(1)">{{ log.client_ip }}</td>
                                 <td class="px-4 py-2 text-slate-800 dark:text-slate-200 font-medium break-all">{{ log.domain }}</td>
                                 <td class="px-4 py-2 text-slate-500 dark:text-slate-400 text-xs">{{ log.type }}</td>
                                 <td class="px-4 py-2 text-slate-600 dark:text-slate-300 font-mono text-xs truncate max-w-[200px]" :title="log.answer">{{ log.answer }}</td>
@@ -522,14 +551,14 @@
                 </div>
                  <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 flex justify-between items-center backdrop-blur-sm">
                      <div class="text-sm text-slate-500 dark:text-slate-400">
-                         Showing <span class="font-medium">{{ (logsPage - 1) * 20 + 1 }}</span> to <span class="font-medium">{{ Math.min(logsPage * 20, logsTotal) }}</span> of <span class="font-medium">{{ logsTotal }}</span> results
+                         Showing <span class="font-medium">{{ (logsPage - 1) * 15 + 1 }}</span> to <span class="font-medium">{{ Math.min(logsPage * 15, logsTotal) }}</span> of <span class="font-medium">{{ logsTotal }}</span> results
                      </div>
                      <div class="flex space-x-2">
                          <button @click="fetchLogs(logsPage - 1)" :disabled="logsPage <= 1" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm hover:bg-white/80 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                             Previous
+                             {{ t('prev') }}
                          </button>
-                         <button @click="fetchLogs(logsPage + 1)" :disabled="logsPage * 20 >= logsTotal" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm hover:bg-white/80 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                             Next
+                         <button @click="fetchLogs(logsPage + 1)" :disabled="logsPage * 15 >= logsTotal" class="btn-glass bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-sm hover:bg-white/80 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                             {{ t('next') }}
                          </button>
                      </div>
                  </div>
@@ -537,6 +566,23 @@
 
             <div v-if="currentView === 'settings'" class="space-y-8 max-w-5xl mx-auto pb-10 animate-fade-in">
             
+                 <div class="glass-card rounded-2xl overflow-hidden">
+                    <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
+                        <i class="fa-solid fa-user-shield text-slate-400 mr-3"></i>
+                        <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">WebUI Settings</h3>
+                    </div>
+                    <div class="p-6 space-y-6 bg-white dark:bg-slate-950">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <form-input :label="t('username')" v-model="config.web_ui.username" :disabled="!canEdit"></form-input>
+                            <form-input :label="t('password')" v-model="config.web_ui.password" type="password" :disabled="!canEdit"></form-input>
+                            <div class="md:col-span-2 mt-2">
+                                <toggle-switch :label="t('setting_guest_mode')" v-model="config.web_ui.guest_mode" :disabled="!canEdit"></toggle-switch>
+                                <p class="text-xs text-slate-500 mt-1 ml-1">Allow viewing dashboard without login. Login required for changes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                  <div class="glass-card rounded-2xl overflow-hidden">
                     <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center">
                         <i class="fa-solid fa-database text-slate-400 mr-3"></i>
@@ -645,11 +691,11 @@
                                         <i class="fa-solid fa-grip-lines"></i>
                                     </div>
                                     
-                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" :class="{'pointer-events-none opacity-80': isSorting}">
-                                        <form-input :label="t('address')" v-model="server.address" placeholder="1.1.1.1:53" :disabled="!canEdit"></form-input>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-end" :class="{'pointer-events-none opacity-80': isSorting}">
+                                        <form-input :label="t('address')" v-model="server.address" placeholder="1.1.1.1:53" :disabled="!canEdit" input-class="h-10"></form-input>
                                         <div>
-                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{{ t('protocol') }}</label>
-                                            <select :disabled="!canEdit" v-model="server.protocol" class="block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border shadow-sm bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500">
+                                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{{ t('protocol') }}</label>
+                                            <select :disabled="!canEdit" v-model="server.protocol" class="block w-full pl-3 pr-10 py-2 text-base border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-lg border shadow-sm bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500 h-10 transition-all">
                                                 <option value="udp">UDP</option>
                                                 <option value="tcp">TCP</option>
                                                 <option value="doh">DoH</option>
@@ -657,7 +703,7 @@
                                                 <option value="doq">DoQ</option>
                                             </select>
                                         </div>
-                                        <form-input :label="t('ecs_ip')" v-model="server.ecs_ip" placeholder="Client Subnet IP" :disabled="!canEdit"></form-input>
+                                        <form-input :label="t('ecs_ip')" v-model="server.ecs_ip" placeholder="Client Subnet IP" :disabled="!canEdit" input-class="h-10"></form-input>
                                     </div>
                                     <div class="mt-4 flex flex-wrap gap-6 pt-4 border-t border-slate-200 dark:border-slate-800" :class="{'pointer-events-none opacity-80': isSorting}">
                                         <toggle-switch v-if="showPipeline(server.protocol)" label="Pipeline" v-model="server.pipeline" :disabled="!canEdit"></toggle-switch>
@@ -667,6 +713,61 @@
                                 </div>
                             </transition-group>
                             <button v-if="canEdit && !isSorting" @click="addUpstream(upstreamTab)" class="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all font-medium flex items-center justify-center"><i class="fa-solid fa-plus-circle mr-2"></i> {{ t('add_server') }}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col">
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fa-solid fa-book-atlas text-slate-400 mr-3"></i>
+                                <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_hosts') }}</h3>
+                            </div>
+                            <button v-if="canEdit" @click="hostsArray.push({ip:'', domain:''})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="p-6 bg-white dark:bg-slate-950 flex-1 overflow-y-auto max-h-[400px] space-y-3 custom-scrollbar">
+                            <div v-if="hostsArray.length === 0" class="text-center py-8 text-slate-400 dark:text-slate-600 text-sm italic">{{ t('no_records') }}</div>
+                            <div v-for="(h, i) in hostsArray" :key="i" class="flex items-center space-x-3 group">
+                                <div class="flex-1 bg-slate-50 dark:bg-slate-900 rounded-lg p-1 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800 transition-all flex items-center">
+                                    <div class="px-2 text-slate-400"><i class="fa-solid fa-network-wired text-xs"></i></div>
+                                    <input v-model="h.ip" :placeholder="t('ip')" :disabled="!canEdit" class="bg-transparent border-none focus:ring-0 text-sm w-full py-1.5 text-slate-700 dark:text-slate-200 placeholder-slate-400 font-mono">
+                                </div>
+                                <div class="text-slate-300 dark:text-slate-600"><i class="fa-solid fa-arrow-right text-xs"></i></div>
+                                <div class="flex-1 bg-slate-50 dark:bg-slate-900 rounded-lg p-1 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800 transition-all flex items-center">
+                                    <div class="px-2 text-slate-400"><i class="fa-solid fa-globe text-xs"></i></div>
+                                    <input v-model="h.domain" :placeholder="t('domain')" :disabled="!canEdit" class="bg-transparent border-none focus:ring-0 text-sm w-full py-1.5 text-slate-700 dark:text-slate-200 placeholder-slate-400 font-mono">
+                                </div>
+                                <button v-if="canEdit" @click="hostsArray.splice(i, 1)" class="text-slate-300 hover:text-red-500 w-8 h-8 flex justify-center items-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col">
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fa-solid fa-filter text-slate-400 mr-3"></i>
+                                <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_rules') }}</h3>
+                            </div>
+                            <button v-if="canEdit" @click="rulesArray.push({domain:'', target:'overseas'})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                        <div class="p-6 bg-white dark:bg-slate-950 flex-1 overflow-y-auto max-h-[400px] space-y-3 custom-scrollbar">
+                            <p class="text-xs text-slate-500 mb-3 flex items-center bg-blue-50 dark:bg-blue-900/20 p-2 rounded-lg border border-blue-100 dark:border-blue-800/30 text-blue-600 dark:text-blue-400"><i class="fa-solid fa-circle-info mr-2"></i> {{ t('rule_help') }}</p>
+                            <div v-if="rulesArray.length === 0" class="text-center py-8 text-slate-400 dark:text-slate-600 text-sm italic">{{ t('no_records') }}</div>
+                            <div v-for="(r, i) in rulesArray" :key="i" class="flex items-center space-x-3 group">
+                                <div class="flex-[2] bg-slate-50 dark:bg-slate-900 rounded-lg p-1 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800 transition-all flex items-center">
+                                    <div class="px-2 text-slate-400"><i class="fa-solid fa-globe text-xs"></i></div>
+                                    <input v-model="r.domain" :placeholder="t('domain')" :disabled="!canEdit" class="bg-transparent border-none focus:ring-0 text-sm w-full py-1.5 text-slate-700 dark:text-slate-200 placeholder-slate-400 font-mono">
+                                </div>
+                                <div class="text-slate-300 dark:text-slate-600"><i class="fa-solid fa-arrow-right text-xs"></i></div>
+                                <div class="flex-1">
+                                    <select v-model="r.target" :disabled="!canEdit" class="block w-full border-slate-300 dark:border-slate-700 rounded-lg py-1.5 pl-2 pr-8 bg-slate-50 dark:bg-slate-900 dark:text-white shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-medium border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800">
+                                        <option value="cn">CN</option>
+                                        <option value="overseas">Overseas</option>
+                                    </select>
+                                </div>
+                                <button v-if="canEdit" @click="rulesArray.splice(i, 1)" class="text-slate-300 hover:text-red-500 w-8 h-8 flex justify-center items-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"><i class="fa-solid fa-times"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -682,6 +783,7 @@
                             <form-input label="GeoSite File" v-model="config.geo_data.geosite_dat" :disabled="!canEdit"></form-input>
                             <form-input label="GeoIP URL" v-model="config.geo_data.geoip_download_url" class="text-sm" :disabled="!canEdit"></form-input>
                             <form-input label="GeoSite URL" v-model="config.geo_data.geosite_download_url" class="text-sm" :disabled="!canEdit"></form-input>
+                            <form-input :label="t('auto_update')" v-model="config.geo_data.auto_update" placeholder="04:00" :disabled="!canEdit"></form-input>
                         </div>
                     </div>
 
@@ -708,9 +810,58 @@
                     </div>
                  </div>
             </div>
-        </main>
+        </div>
+    </div>
         
-        <modal :show="modal.show" :title="modal.title" :max-width="modal.maxWidth" @close="modal.show = false">
+        <div v-else class="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 px-4">
+            <div class="max-w-md w-full space-y-8 glass-card p-8 rounded-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 rounded-full bg-blue-100 dark:bg-blue-900/20 opacity-50 blur-3xl pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 rounded-full bg-purple-100 dark:bg-purple-900/20 opacity-50 blur-3xl pointer-events-none"></div>
+                
+                <div class="text-center relative z-10">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-900/20 mb-4">
+                        <i class="fa-solid fa-shield-halved text-3xl text-blue-600 dark:text-blue-400"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">AutoProxy</h2>
+                    <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">System Dashboard</p>
+                </div>
+                
+                <form class="mt-8 space-y-6 relative z-10" @submit.prevent="doLogin">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{{ t('username') }}</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <input type="text" v-model="loginForm.username" class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" required>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{{ t('password') }}</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-lock"></i>
+                                </div>
+                                <input type="password" v-model="loginForm.password" class="block w-full pl-10 pr-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-950 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button type="submit" class="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all">
+                            <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                                <i class="fa-solid fa-right-to-bracket text-blue-200 group-hover:text-blue-100"></i>
+                            </span>
+                            {{ t('login') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <modal :show="modal.show" :title="modal.title" :max-width="modal.maxWidth" @close="modal.show = false">
             <div v-if="modal.type === 'saving'" class="flex flex-col items-center justify-center py-4">
                 <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-500 mb-4"></i>
                 <p class="text-slate-600 dark:text-slate-400">{{ t('saving') }}</p>
@@ -768,6 +919,60 @@
                 </form>
             </div>
 
+            <div v-if="modal.type === 'log_details'" class="space-y-6">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_time') }}</span> <span class="font-mono text-slate-800 dark:text-slate-200">{{ formatTime(modal.log.time) }}</span></div>
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_client') }}</span> <span class="font-mono text-slate-800 dark:text-slate-200">{{ modal.log.client_ip }}</span></div>
+                    <div class="col-span-2"><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_domain') }}</span> <span class="font-bold text-lg text-slate-900 dark:text-white break-all">{{ modal.log.domain }}</span></div>
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_type') }}</span> <span class="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-800 dark:text-slate-200">{{ modal.log.type }}</span></div>
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_duration') }}</span> <span class="font-mono text-slate-800 dark:text-slate-200">{{ modal.log.duration_ms }}ms</span></div>
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_status') }}</span> <span class="font-bold" :class="modal.log.status === 'NOERROR' ? 'text-green-600' : 'text-red-600'">{{ modal.log.status }}</span></div>
+                    <div><span class="text-slate-500 dark:text-slate-400 block text-xs uppercase">{{ t('log_upstream') }}</span> <span class="font-medium text-blue-600 dark:text-blue-400">{{ modal.log.upstream }}</span></div>
+                </div>
+                
+                <div class="border-t border-slate-200 dark:border-slate-800 pt-4">
+                     <h4 class="text-sm font-bold text-slate-800 dark:text-slate-100 mb-3 uppercase tracking-wide">{{ t('resolution_chain') }}</h4>
+                     <div class="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4 space-y-3 relative">
+                        <div class="absolute top-4 bottom-4 left-6 w-0.5 bg-slate-200 dark:bg-slate-700"></div>
+                        
+                        <div class="relative flex items-start">
+                            <div class="relative z-10 w-4 h-4 rounded-full bg-blue-500 border-2 border-white dark:border-slate-900 mt-1 mr-4 shrink-0"></div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">Question</p>
+                                <p class="font-mono text-sm font-medium text-slate-800 dark:text-slate-200 break-all">{{ modal.log.domain }}</p>
+                            </div>
+                        </div>
+
+                        <div v-for="(rec, i) in modal.log.answer_records" :key="i" class="relative flex items-start">
+                            <div class="relative z-10 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 mt-1 mr-4 shrink-0" :class="rec.type === 'CNAME' ? 'bg-purple-500' : 'bg-green-500'"></div>
+                             <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{{ rec.type }}</span>
+                                    <span class="text-xs text-slate-400">TTL {{ rec.ttl }}</span>
+                                </div>
+                                <p class="font-mono text-sm text-slate-700 dark:text-slate-300 mt-0.5 break-all">{{ rec.data }}</p>
+                            </div>
+                        </div>
+                        
+                        <div v-if="!modal.log.answer_records || modal.log.answer_records.length === 0" class="relative flex items-start">
+                             <div class="relative z-10 w-4 h-4 rounded-full bg-slate-400 border-2 border-white dark:border-slate-900 mt-1 mr-4 shrink-0"></div>
+                             <div class="flex-1 min-w-0">
+                                <p class="text-sm text-slate-500 italic">{{ modal.log.answer || 'No Answer' }}</p>
+                            </div>
+                        </div>
+                     </div>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-2">
+                    <button v-if="!isBlocked(modal.log.domain)" @click="blockDomain(modal.log.domain)" class="btn-glass bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all">
+                        <i class="fa-solid fa-ban mr-2"></i> {{ t('block_domain') }}
+                    </button>
+                    <button v-else @click="unblockDomain(modal.log.domain)" class="btn-glass bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 px-4 py-2 rounded-lg text-sm font-medium flex items-center transition-all">
+                        <i class="fa-solid fa-check mr-2"></i> {{ t('unblock_domain') }}
+                    </button>
+                </div>
+            </div>
+
             <template #footer>
                 <button v-if="modal.type === 'saved'" @click="reloadPage" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
                     {{ t('ok') }}
@@ -812,18 +1017,26 @@ const i18nData = {
         log_duration: "耗时",
         no_logs: "暂无查询日志",
         setting_querylog: "日志记录设置",
-        setting_listen: "服务监听端口 (仅需填写端口号)",
-        setting_bootstrap: "Bootstrap DNS (引导)",
+        setting_listen: "服务监听端口",
+        setting_bootstrap: "Bootstrap DNS",
         setting_upstreams: "上游 DNS 服务器",
-        setting_tls_certs: "TLS 证书配置 (多证书)",
+        setting_hosts: "自定义 Hosts",
+        setting_rules: "自定义分流规则",
+        setting_guest_mode: "开启游客模式",
+        setting_tls_certs: "TLS 证书配置",
         setting_log_size: "日志文件最大大小 (MB)",
-        setting_save_file: "开启持久化存储 (保存到文件)",
+        setting_save_file: "开启持久化存储",
         setting_log_path: "日志文件路径",
-        tab_cn: "国内分组 (CN)",
-        tab_overseas: "海外分组 (Overseas)",
+        tab_cn: "国内分组",
+        tab_overseas: "海外分组",
         address: "服务器地址",
         protocol: "连接协议",
-        ecs_ip: "ECS (客户端子网)",
+        ecs_ip: "ECS IP",
+        domain: "域名",
+        ip: "IP 地址",
+        target: "目标分组",
+        auto_update: "每日自动更新时间 (HH:MM)",
+        rule_help: "支持正则 (以 regexp: 开头)",
         add: "添加记录",
         add_server: "添加上游服务器",
         test_upstreams: "一键测试所有上游",
@@ -859,7 +1072,17 @@ const i18nData = {
         theme_dark: "深色模式",
         sort: "调整排序",
         sort_done: "完成排序",
-        not_listening: "未监听"
+        not_listening: "未监听",
+        unsaved_changes: "有未保存的更改",
+        log_details: "查询详情",
+        resolution_chain: "解析链路",
+        block_domain: "一键拉黑",
+        unblock_domain: "一键解封",
+        blocked_msg: "已添加到 Hosts 黑名单。请点击顶部的 '保存并应用' 以生效。",
+        unblocked_msg: "已从 Hosts 黑名单移除。请点击顶部的 '保存并应用' 以生效。",
+        no_records: "暂无记录",
+        prev: "上一页",
+        next: "下一页"
     },
     en: {
         menu_dashboard: "Dashboard",
@@ -891,18 +1114,26 @@ const i18nData = {
         log_duration: "Duration",
         no_logs: "No logs found",
         setting_querylog: "Query Log",
-        setting_listen: "Listening Ports (Port only)",
+        setting_listen: "Listening Ports",
         setting_bootstrap: "Bootstrap DNS",
         setting_upstreams: "Upstream Servers",
+        setting_hosts: "Custom Hosts",
+        setting_rules: "Custom Rules",
+        setting_guest_mode: "Enable Guest Mode",
         setting_tls_certs: "TLS Certificates",
         setting_log_size: "Log File Max Size (MB)",
-        setting_save_file: "Save to File (Persistent)",
+        setting_save_file: "Save to File",
         setting_log_path: "Log File Path",
-        tab_cn: "Domestic (CN)",
+        tab_cn: "Domestic",
         tab_overseas: "Overseas",
         address: "Address",
         protocol: "Protocol",
         ecs_ip: "ECS IP",
+        domain: "Domain",
+        ip: "IP Address",
+        target: "Target Group",
+        auto_update: "Daily Auto Update Time (HH:MM)",
+        rule_help: "Regex supported (start with regexp:)",
         add: "Add",
         add_server: "Add Server",
         test_upstreams: "Test All Upstreams",
@@ -938,12 +1169,22 @@ const i18nData = {
         theme_dark: "Dark Mode",
         sort: "Sort Order",
         sort_done: "Done Sorting",
-        not_listening: "Not listening"
+        not_listening: "Not listening",
+        unsaved_changes: "Unsaved Changes",
+        log_details: "Query Details",
+        resolution_chain: "Resolution Chain",
+        block_domain: "Block Domain",
+        unblock_domain: "Unblock Domain",
+        blocked_msg: "Added to Hosts blacklist. Please click 'Save & Apply' at the top to take effect.",
+        unblocked_msg: "Removed from Hosts blacklist. Please click 'Save & Apply' at the top to take effect.",
+        no_records: "No records found",
+        prev: "Previous",
+        next: "Next"
     }
 };
 
 const FormInput = {
-    props: ['label', 'modelValue', 'placeholder', 'type', 'disabled'],
+    props: ['label', 'modelValue', 'placeholder', 'type', 'disabled', 'inputClass'],
     emits: ['update:modelValue'],
     template: `
     <div class="w-full">
@@ -952,7 +1193,9 @@ const FormInput = {
             :value="modelValue" 
             :disabled="disabled"
             @input="$emit('update:modelValue', $event.target.value)"
-            class="shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-slate-300 dark:border-slate-700 rounded-lg p-2.5 border transition-all bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500"
+            class="shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-slate-300 dark:border-slate-700 rounded-lg px-3 border transition-all bg-white dark:bg-slate-950 dark:text-white disabled:bg-slate-100 disabled:text-slate-500"
+            :class="inputClass"
+            :style="{height: inputClass && inputClass.includes('h-') ? '' : '2.5rem'}"
             :placeholder="placeholder">
     </div>
     `
@@ -1014,9 +1257,12 @@ const app = Vue.createApp({
             currentView: 'dashboard',
             isDark: false,
             sidebarOpen: false,
+            desktopSidebarOpen: true,
             upstreamTab: 'cn',
             isSorting: false,
             draggedIndex: null,
+            hostsArray: [],
+            rulesArray: [],
             config: {
                 listen: {},
                 bootstrap_dns: [],
@@ -1042,19 +1288,26 @@ const app = Vue.createApp({
             statsTimer: null,
             logsTimer: null,
             
-            authEnabled: false,
+            loadingState: true,
+            unsavedChanges: false,
+            authEnabled: true,
             isLoggedIn: false,
+            guestMode: false,
             loginForm: { username: '', password: '' },
             modal: {
                 show: false,
                 type: '', 
                 title: '',
                 maxWidth: '',
-                testResults: []
+                testResults: [],
+                log: {}
             }
         }
     },
     computed: {
+        canView() {
+            return !this.authEnabled || this.isLoggedIn || this.guestMode;
+        },
         currentUpstreams() {
             return this.upstreamTab === 'cn' ? this.config.upstreams.cn : this.config.upstreams.overseas;
         },
@@ -1165,7 +1418,12 @@ const app = Vue.createApp({
                 const data = await res.json();
                 this.authEnabled = data.enabled;
                 this.isLoggedIn = data.authenticated;
-            } catch(e) { console.error(e); }
+                this.guestMode = data.guest_mode;
+            } catch(e) { 
+                console.error(e); 
+            } finally {
+                this.loadingState = false;
+            }
         },
         openLogin() {
             this.loginForm = { username: '', password: '' };
@@ -1179,9 +1437,7 @@ const app = Vue.createApp({
                     body: JSON.stringify(this.loginForm)
                 });
                 if(res.ok) {
-                    this.modal.show = false;
-                    this.isLoggedIn = true;
-                    this.loadConfig();
+                    window.location.reload();
                 } else {
                     alert(this.t('login_fail'));
                 }
@@ -1203,7 +1459,16 @@ const app = Vue.createApp({
                 if(!this.config.tls_certificates) this.config.tls_certificates = [];
                 if(!this.config.upstreams.cn) this.config.upstreams.cn = [];
                 if(!this.config.upstreams.overseas) this.config.upstreams.overseas = [];
+                if(!this.config.auto_cert) this.config.auto_cert = { domains: [] };
+                if(!this.config.web_ui) this.config.web_ui = { guest_mode: false };
+                if(this.config.web_ui && this.config.web_ui.guest_mode === undefined) this.config.web_ui.guest_mode = false;
                 if(!this.config.query_log) this.config.query_log = { enabled: true, max_history: 5000, save_to_file: false, file: "" };
+                if(!this.config.hosts) this.config.hosts = {};
+                if(!this.config.rules) this.config.rules = {};
+                if(!this.config.geo_data) this.config.geo_data = {};
+
+                this.hostsArray = Object.entries(this.config.hosts).map(([d, i]) => ({domain: d, ip: i}));
+                this.rulesArray = Object.entries(this.config.rules).map(([d, t]) => ({domain: d, target: t}));
                 
                 let idCounter = 0;
                 const addId = (s) => { if(!s._id) s._id = Date.now() + (idCounter++); return s; };
@@ -1230,6 +1495,9 @@ const app = Vue.createApp({
                 const cleanConfig = JSON.parse(JSON.stringify(this.config));
                 if(cleanConfig.upstreams.cn) cleanConfig.upstreams.cn.forEach(s => delete s._id);
                 if(cleanConfig.upstreams.overseas) cleanConfig.upstreams.overseas.forEach(s => delete s._id);
+
+                cleanConfig.hosts = this.hostsArray.reduce((acc, cur) => { if(cur.domain) acc[cur.domain] = cur.ip; return acc; }, {});
+                cleanConfig.rules = this.rulesArray.reduce((acc, cur) => { if(cur.domain) acc[cur.domain] = cur.target; return acc; }, {});
 
                 const res = await fetch('/api/config', {
                     method: 'POST',
@@ -1282,7 +1550,7 @@ const app = Vue.createApp({
         async fetchLogs(page = 1) {
             try {
                 this.logsPage = page;
-                let url = `/api/logs?page=${page}&limit=20`;
+                let url = `/api/logs?page=${page}&limit=15`;
                 if(this.logsFilter) url += '&q=' + encodeURIComponent(this.logsFilter);
                 
                 const res = await fetch(url);
@@ -1333,6 +1601,44 @@ const app = Vue.createApp({
         },
         onDragEnd() {
             this.draggedIndex = null;
+        },
+        showLogDetails(log) {
+            this.modal = {
+                show: true,
+                type: 'log_details',
+                title: this.t('log_details'),
+                maxWidth: 'sm:max-w-2xl',
+                log: log
+            };
+        },
+        isBlocked(domain) {
+            if (!domain) return false;
+            const cleanDomain = domain.toLowerCase().replace(/\.$/, "");
+            return this.hostsArray.some(h => h.domain.toLowerCase() === cleanDomain && h.ip === '0.0.0.0');
+        },
+        blockDomain(domain) {
+            if (!this.canEdit) return;
+            const cleanDomain = domain.toLowerCase().replace(/\.$/, "");
+            if (this.isBlocked(cleanDomain)) return;
+            
+            this.hostsArray.push({ domain: cleanDomain, ip: '0.0.0.0' });
+            this.unsavedChanges = true;
+            this.config.hosts[cleanDomain] = '0.0.0.0';
+            
+            alert(this.t('blocked_msg'));
+            this.modal.show = false;
+        },
+        unblockDomain(domain) {
+             if (!this.canEdit) return;
+             const cleanDomain = domain.toLowerCase().replace(/\.$/, "");
+             const idx = this.hostsArray.findIndex(h => h.domain.toLowerCase() === cleanDomain && h.ip === '0.0.0.0');
+             if (idx !== -1) {
+                 this.hostsArray.splice(idx, 1);
+                 delete this.config.hosts[cleanDomain];
+                 this.unsavedChanges = true;
+                 alert(this.t('unblocked_msg'));
+                 this.modal.show = false;
+             }
         }
     },
     mounted() {

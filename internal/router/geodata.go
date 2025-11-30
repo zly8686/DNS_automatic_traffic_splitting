@@ -17,6 +17,7 @@ type GeoDataManager struct {
 }
 
 func NewGeoDataManager(geoipPath, geositePath string) (*GeoDataManager, error) {
+	debug.FreeOSMemory()
 	log.Printf("正在加载 GeoIP 数据: %s", geoipPath)
 	geoIPData, err := geoip.FromFile(geoipPath)
 	if err != nil {
