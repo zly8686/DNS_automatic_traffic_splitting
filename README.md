@@ -93,14 +93,13 @@ docker run -d \
   --name dns-proxy \
   --restart always \
   --network host \
-  -v $(pwd)/config.yaml:/app/config.yaml \
+  -v $(pwd)/config:/app/config \
   -v $(pwd)/certs:/app/certs \
-  -v $(pwd)/hosts.txt:/app/hosts.txt \
-  -v $(pwd)/rule.txt:/app/rule.txt \
   weijiaqaq/dns_automatic_traffic_splitting
 ```
 
 *注意：建议使用 `--network host` 模式以获得最佳网络性能，特别是对于 UDP 服务。*
+*提示：请将 `config.yaml`, `hosts.txt`, `rule.txt` 以及 GeoIP/GeoSite 文件（如果使用自定义路径）放入您本地的 `$(pwd)/config` 目录中。*
 
 ### 使用 Docker Compose
 
@@ -113,10 +112,8 @@ services:
     restart: always
     network_mode: "host"
     volumes:
-      - ./config.yaml:/app/config.yaml
+      - ./config:/app/config
       - ./certs:/app/certs
-      - ./hosts.txt:/app/hosts.txt
-      - ./rule.txt:/app/rule.txt
 ```
 
 ## ⚙️ 配置说明
@@ -140,6 +137,10 @@ query_log:
   save_to_file: true     # 开启持久化存储
   file: "query.log"
   max_size_mb: 1         # 日志文件最大大小 (MB)，超过自动轮转
+
+geo_data:
+  geoip_dat: "geoip.dat"
+  geosite_dat: "geosite.dat"
 
 upstreams:
   overseas:

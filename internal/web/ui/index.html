@@ -718,28 +718,54 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col">
-                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                            <div class="flex items-center">
-                                <i class="fa-solid fa-book-atlas text-slate-400 mr-3"></i>
-                                <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_hosts') }}</h3>
+                    <div class="glass-card rounded-2xl overflow-hidden flex flex-col h-[600px]">
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <i class="fa-solid fa-book-atlas text-slate-400 mr-3"></i>
+                                    <h3 class="text-lg font-medium text-slate-900 dark:text-slate-100">{{ t('setting_hosts') }}</h3>
+                                </div>
+                                <div class="flex gap-2">
+                                    <div class="relative">
+                                        <input v-model="hostsFilter" @keyup.enter="fetchHosts(1)" placeholder="Search..." class="w-40 text-sm border border-slate-300 dark:border-slate-700 rounded-lg pl-8 pr-2 py-1 bg-white dark:bg-slate-950 dark:text-white focus:ring-1 focus:ring-blue-500">
+                                        <i class="fa-solid fa-search absolute left-2.5 top-2 text-slate-400 text-xs"></i>
+                                    </div>
+                                </div>
                             </div>
-                            <button v-if="canEdit" @click="hostsArray.push({ip:'', domain:''})" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 w-8 h-8 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-plus"></i></button>
+                            <div v-if="canEdit" class="flex gap-2">
+                                <input v-model="newHost.ip" placeholder="IP Address" class="flex-1 min-w-[120px] text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-950 dark:text-white font-mono">
+                                <input v-model="newHost.domain" placeholder="Domain" class="flex-1 min-w-[120px] text-sm border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 bg-white dark:bg-slate-950 dark:text-white font-mono">
+                                <button @click="addHost" :disabled="!newHost.domain || !newHost.ip" class="btn-glass btn-glass-primary px-3 py-1.5 rounded-lg text-sm disabled:opacity-50"><i class="fa-solid fa-plus"></i></button>
+                            </div>
                         </div>
-                        <div class="p-6 bg-white dark:bg-slate-950 flex-1 overflow-y-auto max-h-[400px] space-y-3 custom-scrollbar">
-                            <div v-if="hostsArray.length === 0" class="text-center py-8 text-slate-400 dark:text-slate-600 text-sm italic">{{ t('no_records') }}</div>
-                            <div v-for="(h, i) in hostsArray" :key="i" class="flex items-center space-x-3 group">
-                                <div class="flex-1 bg-slate-50 dark:bg-slate-900 rounded-lg p-1 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800 transition-all flex items-center">
-                                    <div class="px-2 text-slate-400"><i class="fa-solid fa-network-wired text-xs"></i></div>
-                                    <input v-model="h.ip" :placeholder="t('ip')" :disabled="!canEdit" class="bg-transparent border-none focus:ring-0 text-sm w-full py-1.5 text-slate-700 dark:text-slate-200 placeholder-slate-400 font-mono">
-                                </div>
-                                <div class="text-slate-300 dark:text-slate-600"><i class="fa-solid fa-arrow-right text-xs"></i></div>
-                                <div class="flex-1 bg-slate-50 dark:bg-slate-900 rounded-lg p-1 border border-transparent group-hover:border-slate-200 dark:group-hover:border-slate-800 transition-all flex items-center">
-                                    <div class="px-2 text-slate-400"><i class="fa-solid fa-globe text-xs"></i></div>
-                                    <input v-model="h.domain" :placeholder="t('domain')" :disabled="!canEdit" class="bg-transparent border-none focus:ring-0 text-sm w-full py-1.5 text-slate-700 dark:text-slate-200 placeholder-slate-400 font-mono">
-                                </div>
-                                <button v-if="canEdit" @click="hostsArray.splice(i, 1)" class="text-slate-300 hover:text-red-500 w-8 h-8 flex justify-center items-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"><i class="fa-solid fa-times"></i></button>
-                            </div>
+                        <div class="flex-1 overflow-auto custom-scrollbar bg-white dark:bg-slate-950 relative">
+                             <table class="min-w-full divide-y divide-slate-100 dark:divide-slate-800">
+                                <thead class="bg-slate-50 dark:bg-slate-900 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">IP</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Domain</th>
+                                        <th v-if="canEdit" class="px-4 py-2 w-10"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <tr v-for="h in hostsData" :key="h.domain" class="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                                        <td class="px-4 py-2 text-sm font-mono text-slate-700 dark:text-slate-300">{{ h.ip }}</td>
+                                        <td class="px-4 py-2 text-sm font-mono text-slate-700 dark:text-slate-300 break-all">{{ h.domain }}</td>
+                                        <td v-if="canEdit" class="px-4 py-2 text-right">
+                                            <button @click="deleteHost(h.domain)" class="text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash-can"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                             </table>
+                             <div v-if="hostsData.length === 0" class="text-center py-10 text-slate-400 italic">{{ t('no_records') }}</div>
+                        </div>
+                        <div class="bg-slate-50/80 dark:bg-slate-900/80 px-4 py-2 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-sm">
+                             <span class="text-slate-500">Total: {{ hostsTotal }}</span>
+                             <div class="flex gap-2">
+                                 <button @click="fetchHosts(hostsPage - 1)" :disabled="hostsPage <= 1" class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"><i class="fa-solid fa-chevron-left"></i></button>
+                                 <span class="text-slate-700 dark:text-slate-300">{{ hostsPage }}</span>
+                                 <button @click="fetchHosts(hostsPage + 1)" :disabled="hostsPage * 50 >= hostsTotal" class="px-2 py-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30"><i class="fa-solid fa-chevron-right"></i></button>
+                             </div>
                         </div>
                     </div>
 
@@ -1262,6 +1288,11 @@ const app = Vue.createApp({
             isSorting: false,
             draggedIndex: null,
             hostsArray: [],
+            hostsData: [],
+            hostsPage: 1,
+            hostsTotal: 0,
+            hostsFilter: "",
+            newHost: { domain: "", ip: "" },
             rulesArray: [],
             config: {
                 listen: {},
@@ -1467,7 +1498,7 @@ const app = Vue.createApp({
                 if(!this.config.rules) this.config.rules = {};
                 if(!this.config.geo_data) this.config.geo_data = {};
 
-                this.hostsArray = Object.entries(this.config.hosts).map(([d, i]) => ({domain: d, ip: i}));
+                this.fetchHosts(1);
                 this.rulesArray = Object.entries(this.config.rules).map(([d, t]) => ({domain: d, target: t}));
                 
                 let idCounter = 0;
@@ -1496,7 +1527,7 @@ const app = Vue.createApp({
                 if(cleanConfig.upstreams.cn) cleanConfig.upstreams.cn.forEach(s => delete s._id);
                 if(cleanConfig.upstreams.overseas) cleanConfig.upstreams.overseas.forEach(s => delete s._id);
 
-                cleanConfig.hosts = this.hostsArray.reduce((acc, cur) => { if(cur.domain) acc[cur.domain] = cur.ip; return acc; }, {});
+                cleanConfig.hosts = {};
                 cleanConfig.rules = this.rulesArray.reduce((acc, cur) => { if(cur.domain) acc[cur.domain] = cur.target; return acc; }, {});
 
                 const res = await fetch('/api/config', {
@@ -1563,6 +1594,49 @@ const app = Vue.createApp({
             try {
                 const res = await fetch('/api/stats');
                 this.stats = await res.json();
+            } catch(e) { console.error(e); }
+        },
+        async fetchHosts(page = 1) {
+            this.hostsPage = page;
+            let url = `/api/hosts?page=${page}&limit=50`;
+            if(this.hostsFilter) url += '&q=' + encodeURIComponent(this.hostsFilter);
+            try {
+                const res = await fetch(url);
+                if(!res.ok) return;
+                const data = await res.json();
+                this.hostsData = data.data || [];
+                this.hostsTotal = data.total || 0;
+            } catch(e) { console.error(e); }
+        },
+        async addHost() {
+            if(!this.newHost.domain || !this.newHost.ip) return;
+            try {
+                const res = await fetch('/api/hosts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hosts: [{ domain: this.newHost.domain, ip: this.newHost.ip }] })
+                });
+                if(res.ok) {
+                    this.newHost = { domain: "", ip: "" };
+                    this.fetchHosts(this.hostsPage);
+                } else {
+                    alert("Failed to add host");
+                }
+            } catch(e) { console.error(e); }
+        },
+        async deleteHost(domain) {
+            if(!confirm("Delete " + domain + "?")) return;
+            try {
+                const res = await fetch('/api/hosts', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ domains: [domain] })
+                });
+                if(res.ok) {
+                    this.fetchHosts(this.hostsPage);
+                } else {
+                    alert("Failed to delete host");
+                }
             } catch(e) { console.error(e); }
         },
         addBootstrap() { this.config.bootstrap_dns.push(""); },

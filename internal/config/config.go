@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -21,6 +22,7 @@ type Config struct {
 	TLSCertificates []TLSCertConfig   `yaml:"tls_certificates" json:"tls_certificates"`
 	WebUI           WebUIConfig       `yaml:"web_ui" json:"web_ui"`
 	QueryLog        QueryLogConfig    `yaml:"query_log" json:"query_log"`
+	ConfigDir       string            `yaml:"-" json:"-"`
 }
 
 type TLSCertConfig struct {
@@ -80,21 +82,28 @@ type GeoDataConfig struct {
 	GeoSiteDat         string `yaml:"geosite_dat" json:"geosite_dat"`
 	GeoIPDownloadURL   string `yaml:"geoip_download_url" json:"geoip_download_url"`
 	GeoSiteDownloadURL string `yaml:"geosite_download_url" json:"geosite_download_url"`
-	AutoUpdate         string `yaml:"auto_update" json:"auto_update"` // Format: "15:04" (HH:MM)
+	AutoUpdate         string `yaml:"auto_update" json:"auto_update"`
 }
 
 func LoadConfig(configPath string) (*Config, error) {
-	data, err := ioutil.ReadFile(configPath)
+	absPath, err := filepath.Abs(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("无法读取配置文件 %s: %w", configPath, err)
+		return nil, fmt.Errorf("failed to resolve config path: %w", err)
+	}
+	configDir := filepath.Dir(absPath)
+
+	data, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		return nil, fmt.Errorf("无法读取配置文件 %s: %w", absPath, err)
 	}
 
 	var cfg Config
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("无法解析配置文件 %s: %w", configPath, err)
+		return nil, fmt.Errorf("无法解析配置文件 %s: %w", absPath, err)
 	}
 
+	cfg.ConfigDir = configDir
 	cfg.QueryLog.Enabled = true
 
 	normalizePort := func(p *string) {
@@ -111,22 +120,51 @@ func LoadConfig(configPath string) (*Config, error) {
 	cfg.Hosts = make(map[string]string)
 	cfg.Rules = make(map[string]string)
 
-	if err := loadHostsFile("hosts.txt", cfg.Hosts); err != nil {
+	hostsPath := filepath.Join(configDir, "hosts.txt")
+	if err := loadHostsFile(hostsPath, cfg.Hosts); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("加载 hosts.txt 失败: %w", err)
 		}
 	}
 
-	if err := loadRulesFile("rule.txt", cfg.Rules); err != nil {
+	rulesPath := filepath.Join(configDir, "rule.txt")
+	if err := loadRulesFile(rulesPath, cfg.Rules); err != nil {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("加载 rule.txt 失败: %w", err)
 		}
 	}
 
+	resolvePath := func(p string) string {
+		if p == "" {
+			return ""
+		}
+		if !filepath.IsAbs(p) {
+			return filepath.Join(configDir, p)
+		}
+		return p
+	}
+
+	if cfg.GeoData.GeoIPDat == "" {
+		cfg.GeoData.GeoIPDat = "geoip.dat"
+	}
+	cfg.GeoData.GeoIPDat = resolvePath(cfg.GeoData.GeoIPDat)
+
+	if cfg.GeoData.GeoSiteDat == "" {
+		cfg.GeoData.GeoSiteDat = "geosite.dat"
+	}
+	cfg.GeoData.GeoSiteDat = resolvePath(cfg.GeoData.GeoSiteDat)
+
 	return &cfg, nil
 }
 
 func (c *Config) Save(configPath string) error {
+	absPath, err := filepath.Abs(configPath)
+	if err != nil {
+		return err
+	}
+	configDir := filepath.Dir(absPath)
+	c.ConfigDir = configDir
+
 	normalizePort := func(p *string) {
 		if *p != "" && !strings.Contains(*p, ":") {
 			*p = ":" + *p
@@ -138,19 +176,34 @@ func (c *Config) Save(configPath string) error {
 	normalizePort(&c.Listen.DOT)
 	normalizePort(&c.Listen.DOQ)
 
-	data, err := yaml.Marshal(c)
+	relPath := func(p string) string {
+		if strings.HasPrefix(p, configDir) {
+			if rel, err := filepath.Rel(configDir, p); err == nil {
+				return rel
+			}
+		}
+		return p
+	}
+
+	saveCfg := *c
+	saveCfg.GeoData.GeoIPDat = relPath(c.GeoData.GeoIPDat)
+	saveCfg.GeoData.GeoSiteDat = relPath(c.GeoData.GeoSiteDat)
+
+	data, err := yaml.Marshal(saveCfg)
 	if err != nil {
 		return fmt.Errorf("无法序列化配置: %w", err)
 	}
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("无法写入配置文件 %s: %w", configPath, err)
+	if err := ioutil.WriteFile(absPath, data, 0644); err != nil {
+		return fmt.Errorf("无法写入配置文件 %s: %w", absPath, err)
 	}
 
-	if err := saveHostsFile("hosts.txt", c.Hosts); err != nil {
+	hostsPath := filepath.Join(configDir, "hosts.txt")
+	if err := saveHostsFile(hostsPath, c.Hosts); err != nil {
 		return fmt.Errorf("无法写入 hosts.txt: %w", err)
 	}
 
-	if err := saveRulesFile("rule.txt", c.Rules); err != nil {
+	rulesPath := filepath.Join(configDir, "rule.txt")
+	if err := saveRulesFile(rulesPath, c.Rules); err != nil {
 		return fmt.Errorf("无法写入 rule.txt: %w", err)
 	}
 
@@ -240,5 +293,19 @@ func GetDefaultConfigPath() string {
 	if p := os.Getenv("DOH_AUTOPROXY_CONFIG"); p != "" {
 		return p
 	}
+
+	possiblePaths := []string{
+		"config.yaml",
+		"config/config.yaml",
+		"/app/config/config.yaml",
+		"/etc/doh-autoproxy/config.yaml",
+	}
+
+	for _, p := range possiblePaths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
 	return "config.yaml"
 }

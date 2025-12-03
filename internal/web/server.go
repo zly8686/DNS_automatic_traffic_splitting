@@ -13,6 +13,8 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,9 +166,9 @@ func StartWebServer(mgr *manager.ServiceManager) {
 				return
 			}
 
-			// Return a copy of config with masked password
 			respCfg := *currentCfg
 			respCfg.WebUI.Password = "******"
+			respCfg.Hosts = nil
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(respCfg)
@@ -185,9 +187,13 @@ func StartWebServer(mgr *manager.ServiceManager) {
 				return
 			}
 
-			// If password came back as masked, restore the original one
 			if newCfg.WebUI.Password == "******" {
 				newCfg.WebUI.Password = mgr.Config.WebUI.Password
+			}
+
+			newCfg.Hosts = make(map[string]string)
+			for k, v := range mgr.Config.Hosts {
+				newCfg.Hosts[k] = v
 			}
 
 			configPath := config.GetDefaultConfigPath()
@@ -203,6 +209,136 @@ func StartWebServer(mgr *manager.ServiceManager) {
 
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("Config saved and service reloaded."))
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/api/hosts", func(w http.ResponseWriter, r *http.Request) {
+		if !checkAuth(r) && (!mgr.Config.WebUI.GuestMode || r.Method != http.MethodGet) {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			page := 1
+			limit := 50
+			q := strings.ToLower(r.URL.Query().Get("q"))
+
+			if p := r.URL.Query().Get("page"); p != "" {
+				fmt.Sscanf(p, "%d", &page)
+			}
+			if l := r.URL.Query().Get("limit"); l != "" {
+				fmt.Sscanf(l, "%d", &limit)
+			}
+			if page < 1 {
+				page = 1
+			}
+			if limit < 1 {
+				limit = 50
+			}
+
+			type HostEntry struct {
+				Domain string `json:"domain"`
+				IP     string `json:"ip"`
+			}
+
+			var allHosts []HostEntry
+			for k, v := range mgr.Config.Hosts {
+				if q == "" || strings.Contains(k, q) || strings.Contains(v, q) {
+					allHosts = append(allHosts, HostEntry{Domain: k, IP: v})
+				}
+			}
+
+			sort.Slice(allHosts, func(i, j int) bool {
+				return allHosts[i].Domain < allHosts[j].Domain
+			})
+
+			total := len(allHosts)
+			start := (page - 1) * limit
+			end := start + limit
+			if start > total {
+				start = total
+			}
+			if end > total {
+				end = total
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"data":  allHosts[start:end],
+				"total": total,
+				"page":  page,
+				"limit": limit,
+			})
+			return
+		}
+
+		if r.Method == http.MethodPost {
+			var payload struct {
+				Hosts []struct {
+					Domain string `json:"domain"`
+					IP     string `json:"ip"`
+				} `json:"hosts"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			newCfg := *mgr.Config
+			newCfg.Hosts = make(map[string]string)
+			for k, v := range mgr.Config.Hosts {
+				newCfg.Hosts[k] = v
+			}
+
+			for _, h := range payload.Hosts {
+				newCfg.Hosts[strings.ToLower(h.Domain)] = h.IP
+			}
+
+			configPath := config.GetDefaultConfigPath()
+			if err := newCfg.Save(configPath); err != nil {
+				http.Error(w, "Failed to save config: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if err := mgr.Reload(&newCfg); err != nil {
+				http.Error(w, "Failed to reload: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		if r.Method == http.MethodDelete {
+			var payload struct {
+				Domains []string `json:"domains"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			newCfg := *mgr.Config
+			newCfg.Hosts = make(map[string]string)
+			for k, v := range mgr.Config.Hosts {
+				newCfg.Hosts[k] = v
+			}
+
+			for _, d := range payload.Domains {
+				delete(newCfg.Hosts, strings.ToLower(d))
+			}
+
+			configPath := config.GetDefaultConfigPath()
+			if err := newCfg.Save(configPath); err != nil {
+				http.Error(w, "Failed to save config: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if err := mgr.Reload(&newCfg); err != nil {
+				http.Error(w, "Failed to reload: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 

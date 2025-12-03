@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+	_ "time/tzdata"
 
 	"doh-autoproxy/internal/config"
 	"doh-autoproxy/internal/querylog"
@@ -161,6 +162,8 @@ func (m *ServiceManager) runAutoUpdate() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
+	lastAttempt := time.Time{}
+
 	for {
 		select {
 		case <-m.stopAutoUpdate:
@@ -168,6 +171,7 @@ func (m *ServiceManager) runAutoUpdate() {
 		case <-ticker.C:
 			m.mu.Lock()
 			autoUpdate := m.Config.GeoData.AutoUpdate
+			geoIPFile := m.Config.GeoData.GeoIPDat
 			m.mu.Unlock()
 
 			if autoUpdate == "" {
@@ -175,13 +179,41 @@ func (m *ServiceManager) runAutoUpdate() {
 			}
 
 			now := time.Now()
-			target, err := time.Parse("15:04", autoUpdate)
+			loc, err := time.LoadLocation("Asia/Shanghai")
+			if err == nil {
+				now = now.In(loc)
+			} else {
+			}
+
+			parsed, err := time.Parse("15:04", autoUpdate)
 			if err != nil {
 				continue
 			}
 
-			if now.Hour() == target.Hour() && now.Minute() == target.Minute() {
-				log.Println("触发计划的 Geo 数据更新...")
+			targetTime := time.Date(now.Year(), now.Month(), now.Day(), parsed.Hour(), parsed.Minute(), 0, 0, now.Location())
+
+			shouldUpdate := false
+
+			if now.After(targetTime) || now.Equal(targetTime) {
+				fi, err := os.Stat(geoIPFile)
+				if err != nil {
+					shouldUpdate = true
+				} else {
+					modTime := fi.ModTime().In(now.Location())
+					if modTime.Before(targetTime) {
+						shouldUpdate = true
+					}
+				}
+			}
+
+			if shouldUpdate {
+				if time.Since(lastAttempt) < 1*time.Hour {
+					continue
+				}
+
+				log.Println("触发计划的 Geo 数据更新 (检测到数据过时)...")
+				lastAttempt = time.Now()
+
 				m.ForceDownloadGeoFiles()
 
 				m.mu.Lock()
