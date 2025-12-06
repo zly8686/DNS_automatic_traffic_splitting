@@ -189,10 +189,10 @@ func (r *Router) routeInternal(ctx context.Context, req *dns.Msg) (*dns.Msg, str
 		switch strings.ToLower(rule) {
 		case "cn":
 			resp, err := client.RaceResolve(ctx, req, r.cnClients)
-			return resp, "Rule(CN)", err
+			return resp, "Rule(国内)", err
 		case "overseas":
 			resp, err := client.RaceResolve(ctx, req, r.overseasClients)
-			return resp, "Rule(Overseas)", err
+			return resp, "Rule(国外)", err
 		default:
 		}
 	}
@@ -202,10 +202,10 @@ func (r *Router) routeInternal(ctx context.Context, req *dns.Msg) (*dns.Msg, str
 			switch strings.ToLower(rr.Target) {
 			case "cn":
 				resp, err := client.RaceResolve(ctx, req, r.cnClients)
-				return resp, "Rule(Regex/CN)", err
+				return resp, "Rule(Regex/国内)", err
 			case "overseas":
 				resp, err := client.RaceResolve(ctx, req, r.overseasClients)
-				return resp, "Rule(Regex/Overseas)", err
+				return resp, "Rule(Regex/国外)", err
 			}
 		}
 	}
@@ -214,16 +214,16 @@ func (r *Router) routeInternal(ctx context.Context, req *dns.Msg) (*dns.Msg, str
 		switch strings.ToLower(geoSiteRule) {
 		case "cn":
 			resp, err := client.RaceResolve(ctx, req, r.cnClients)
-			return resp, "GeoSite(CN)", err
+			return resp, "GeoSite(国内)", err
 		default:
 			resp, err := client.RaceResolve(ctx, req, r.overseasClients)
-			return resp, "GeoSite(Overseas)", err
+			return resp, "GeoSite(国外)", err
 		}
 	}
 
 	resp, err := client.RaceResolve(ctx, req, r.overseasClients)
 	if err != nil {
-		return nil, "GeoIP(Fail)", fmt.Errorf("GeoIP分流时首次海外解析失败: %w", err)
+		return nil, "GeoIP(失败)", fmt.Errorf("GeoIP分流时首次海外解析失败: %w", err)
 	}
 
 	var resolvedIP net.IP
@@ -240,8 +240,8 @@ func (r *Router) routeInternal(ctx context.Context, req *dns.Msg) (*dns.Msg, str
 
 	if resolvedIP != nil && r.geo.IsCNIP(resolvedIP) {
 		resp, err := client.RaceResolve(ctx, req, r.cnClients)
-		return resp, "GeoIP(CN)", err
+		return resp, "GeoIP(国内)", err
 	}
 
-	return resp, "GeoIP(Overseas)", nil
+	return resp, "GeoIP(国外)", nil
 }

@@ -9,8 +9,8 @@ import (
 )
 
 type Bootstrapper struct {
-	servers []string
-	counter uint64
+	counter uint64      // 移到结构体开头，确保64位对齐
+	servers []string    // 其他字段放在后面
 }
 
 func NewBootstrapper(servers []string) *Bootstrapper {
@@ -22,7 +22,10 @@ func NewBootstrapper(servers []string) *Bootstrapper {
 			normalized[i] = s
 		}
 	}
-	return &Bootstrapper{servers: normalized}
+	return &Bootstrapper{
+		servers: normalized,
+		// 注意：counter会被自动初始化为0
+	}
 }
 
 func (b *Bootstrapper) LookupIP(ctx context.Context, host string) (string, error) {
@@ -41,6 +44,7 @@ func (b *Bootstrapper) LookupIP(ctx context.Context, host string) (string, error
 		return ips[0].String(), nil
 	}
 
+	// 这里的原子操作现在会在对齐的地址上执行
 	idx := atomic.AddUint64(&b.counter, 1)
 	server := b.servers[idx%uint64(len(b.servers))]
 
